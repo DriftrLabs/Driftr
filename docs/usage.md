@@ -51,20 +51,53 @@ cd my-project
 driftr pin node@22.14.0
 ```
 
-This creates (or updates) a `.driftr.toml` file in the current directory:
+On first use, Driftr prompts you to choose a storage format:
+
+```
+No existing project config found. How should the Node.js version be stored?
+  1) .driftr.toml (recommended)
+  2) package.json (driftr key)
+Choose [1/2]:
+```
+
+Choosing `.driftr.toml` creates:
 
 ```toml
 [tools]
 node = "22.14.0"
 ```
 
+Choosing `package.json` adds a `driftr` key to your existing `package.json`:
+
+```json
+{
+  "name": "my-project",
+  "driftr": {
+    "node": "22.14.0"
+  }
+}
+```
+
+Subsequent `driftr pin` commands detect the existing format and reuse it automatically.
+
+**Migrating between formats:**
+
+```bash
+# Switch from .driftr.toml to package.json (or vice versa)
+driftr pin node@22.14.0 --migrate
+```
+
+This writes the version in the other format and removes the old config.
+
 **Requirements:**
 - The version must already be installed
+- `package.json` format requires an existing `package.json` file (run `npm init` first)
 
 **Behavior:**
 - Anyone who clones the project and has Driftr set up will automatically use the pinned version
 - The pinned version takes priority over the global default
-- Nested directories inherit the pin until another `.driftr.toml` overrides it
+- Nested directories inherit the pin until another config overrides it
+- In non-interactive environments (CI), defaults to `.driftr.toml`
 
 ## driftr list
 
@@ -167,7 +200,8 @@ When you run `node` (or `npm`/`npx`), Driftr resolves the version in this order:
 |----------|--------|------|
 | 1 | Explicit `--node` flag | `driftr run --node 24 -- ...` |
 | 2 | Project `.driftr.toml` | Found in current or parent directory |
-| 3 | Global default | Set via `driftr default` |
+| 3 | `package.json` driftr key | Found in current or parent directory |
+| 4 | Global default | Set via `driftr default` |
 
 If no version is configured at any level, Driftr prints an actionable error:
 

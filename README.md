@@ -20,7 +20,7 @@ Driftr manages Node.js versions so you don't have to think about them. Pin a ver
 
 - **Shim-based** -- `node`, `npm`, and `npx` just work, resolved per-project or globally
 - **Fast** -- near-zero overhead via `syscall.Exec` process replacement
-- **Deterministic** -- explicit resolution chain: project config > global default
+- **Deterministic** -- explicit resolution chain: project config > `package.json` > global default
 - **Secure** -- SHA256 checksum verification on every download
 - **Simple** -- six commands cover the entire workflow
 
@@ -42,7 +42,7 @@ driftr install node@22
 # Set global default
 driftr default node@22.22.0
 
-# Pin a project
+# Pin a project (prompts for .driftr.toml or package.json on first use)
 cd my-project
 driftr pin node@22.22.0
 
@@ -56,7 +56,7 @@ node -v  # resolves automatically
 |---------|-------------|
 | `driftr install node@<version>` | Download and install a Node.js version |
 | `driftr default node@<version>` | Set the global default version |
-| `driftr pin node@<version>` | Pin a version to the current project |
+| `driftr pin node@<version>` | Pin a version to the current project (`.driftr.toml` or `package.json`) |
 | `driftr list` | List installed versions |
 | `driftr which node` | Show which binary would be executed and why |
 | `driftr run --node <ver> -- <cmd>` | Run a command under a specific version |
@@ -76,7 +76,8 @@ All commands support `-v` / `--verbose` for detailed output including resolver t
                     │              │
                     │ 1. explicit  │
                     │ 2. project   │  walks up dirs for .driftr.toml
-                    │ 3. global    │  reads ~/.driftr/config/config.toml
+                    │ 3. pkg.json  │  walks up dirs for package.json driftr key
+                    │ 4. global    │  reads ~/.driftr/config/config.toml
                     └──────┬──────┘
                            │
                     ┌──────▼──────┐

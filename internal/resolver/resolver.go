@@ -13,8 +13,9 @@ import (
 type Source int
 
 const (
-	SourceExplicit Source = iota
-	SourceProject
+	SourceExplicit    Source = iota
+	SourceProject           // .driftr.toml
+	SourcePackageJSON       // package.json driftr.node
 	SourceGlobal
 )
 
@@ -24,6 +25,8 @@ func (s Source) String() string {
 		return "explicit override"
 	case SourceProject:
 		return "project config"
+	case SourcePackageJSON:
+		return "package.json (driftr)"
 	case SourceGlobal:
 		return "global default"
 	default:
@@ -125,9 +128,11 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 		return nil, err
 	}
 
-	// Walk up directories looking for .driftr.toml, logging each step.
+	// Walk up directories looking for .driftr.toml or package.json (volta),
+	// checking both in each directory before moving to the parent.
 	current := absDir
 	for {
+		// Check .driftr.toml first.
 		cfgPath := filepath.Join(current, config.ProjectConfigFile)
 		if verbose {
 			fmt.Printf("  [resolve]   Checking: %s\n", cfgPath)
@@ -138,24 +143,21 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 			return nil, err
 		}
 		if cfg != nil && cfg.Tools.Node != "" {
-			version := cfg.Tools.Node
-			binPath, err := platform.NodeBinary(version)
-			if err != nil {
-				return nil, err
-			}
+			return resolveProjectVersion(cfg.Tools.Node, current, SourceProject)
+		}
 
-			if _, err := os.Stat(binPath); os.IsNotExist(err) {
-				return nil, fmt.Errorf("Node %s (pinned in %s) is not installed. Run `driftr install node@%s`",
-					version, current, version)
-			}
+		// Check package.json volta.node.
+		pkgPath := filepath.Join(current, "package.json")
+		if verbose {
+			fmt.Printf("  [resolve]   Checking: %s (driftr)\n", pkgPath)
+		}
 
-			return &Resolution{
-				Tool:       "node",
-				Version:    version,
-				BinaryPath: binPath,
-				Source:     SourceProject,
-				ProjectDir: current,
-			}, nil
+		pkg, err := config.LoadPackageJSON(current)
+		if err != nil {
+			return nil, err
+		}
+		if pkg != nil {
+			return resolveProjectVersion(pkg.Driftr.Node, current, SourcePackageJSON)
 		}
 
 		parent := filepath.Dir(current)
@@ -166,6 +168,26 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 	}
 
 	return nil, nil
+}
+
+func resolveProjectVersion(version, dir string, source Source) (*Resolution, error) {
+	binPath, err := platform.NodeBinary(version)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(binPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("Node %s (pinned in %s) is not installed. Run `driftr install node@%s`",
+			version, dir, version)
+	}
+
+	return &Resolution{
+		Tool:       "node",
+		Version:    version,
+		BinaryPath: binPath,
+		Source:     source,
+		ProjectDir: dir,
+	}, nil
 }
 
 func resolveFromGlobal() (*Resolution, error) {
