@@ -131,7 +131,7 @@ func ListInstalledVersions() ([]string, error) {
 }
 
 func fetchNodeIndex() ([]NodeRelease, error) {
-	resp, err := http.Get(nodeIndexURL)
+	resp, err := httpClient.Get(nodeIndexURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Node.js release index: %w", err)
 	}

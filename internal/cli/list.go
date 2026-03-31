@@ -16,7 +16,7 @@ func newListCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			versions, err := installer.ListInstalledVersions()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to list versions: %w", err)
 			}
 
 			if len(versions) == 0 {
@@ -27,7 +27,7 @@ func newListCmd() *cobra.Command {
 
 			cfg, err := config.LoadGlobal()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to load global config: %w", err)
 			}
 
 			fmt.Println("Installed Node.js versions:")

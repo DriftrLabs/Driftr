@@ -20,7 +20,7 @@ func ShasumsURL(version string) string {
 func FetchExpectedChecksum(version, filename string) (string, error) {
 	url := ShasumsURL(version)
 
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch checksums: %w", err)
 	}

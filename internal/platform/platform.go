@@ -148,6 +148,20 @@ func OS() string {
 	}
 }
 
+// ToolBinary returns the binary path for a given tool and Node.js version.
+func ToolBinary(tool, version string) (string, error) {
+	switch tool {
+	case "node":
+		return NodeBinary(version)
+	case "npm":
+		return NpmBinary(version)
+	case "npx":
+		return NpxBinary(version)
+	default:
+		return "", fmt.Errorf("unknown tool: %s", tool)
+	}
+}
+
 // ArchiveExt returns the archive extension for the current platform.
 func ArchiveExt() string {
 	if runtime.GOOS == "windows" {

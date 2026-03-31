@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/resolver"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,7 @@ func newWhichCmd() *cobra.Command {
 				return err
 			}
 
-			binPath, err := resolver.ResolveBinary(tool, "")
+			binPath, err := platform.ToolBinary(tool, res.Version)
 			if err != nil {
 				return err
 			}

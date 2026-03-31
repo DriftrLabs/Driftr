@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/DriftrLabs/driftr/internal/process"
 	"github.com/DriftrLabs/driftr/internal/resolver"
@@ -13,9 +12,9 @@ func newRunCmd() *cobra.Command {
 	var nodeVersion string
 
 	cmd := &cobra.Command{
-		Use:   "run [flags] -- <command> [args...]",
-		Short: "Run a command under a specific Node.js version",
-		Long:  "Execute a command using an explicitly specified Node.js version without changing defaults.\n\nExample:\n  driftr run --node 24.0.0 -- npm test",
+		Use:                "run [flags] -- <command> [args...]",
+		Short:              "Run a command under a specific Node.js version",
+		Long:               "Execute a command using an explicitly specified Node.js version without changing defaults.\n\nExample:\n  driftr run --node 24.0.0 -- npm test",
 		DisableFlagParsing: false,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -35,8 +34,7 @@ func newRunCmd() *cobra.Command {
 				return err
 			}
 
-			os.Exit(exitCode)
-			return nil
+			return &ExitError{Code: exitCode}
 		},
 	}
 

@@ -58,31 +58,3 @@ func SaveProject(dir string, cfg *ProjectConfig) error {
 
 	return nil
 }
-
-// FindProjectConfig walks up from dir looking for .driftr.toml.
-// Returns the directory containing the config and the config itself,
-// or nil if no project config is found.
-func FindProjectConfig(dir string) (string, *ProjectConfig, error) {
-	dir, err := filepath.Abs(dir)
-	if err != nil {
-		return "", nil, err
-	}
-
-	for {
-		cfg, err := LoadProject(dir)
-		if err != nil {
-			return "", nil, err
-		}
-		if cfg != nil {
-			return dir, cfg, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-
-	return "", nil, nil
-}

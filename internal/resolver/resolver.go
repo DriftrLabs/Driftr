@@ -7,15 +7,47 @@ import (
 
 	"github.com/DriftrLabs/driftr/internal/config"
 	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/version"
 )
+
+// RequireInstalled verifies a version string parses correctly and the version is installed.
+// Returns the normalized version string and binary path, or an actionable error.
+func RequireInstalled(versionSpec string) (string, string, error) {
+	v, err := version.Parse(versionSpec)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid version: %w", err)
+	}
+	versionStr := v.String()
+	binPath, err := requireBinaryExists(versionStr, "")
+	if err != nil {
+		return "", "", err
+	}
+	return versionStr, binPath, nil
+}
+
+// requireBinaryExists checks that the node binary for the given version is installed.
+// The context string (e.g. "pinned in /path") is included in the error message if non-empty.
+func requireBinaryExists(ver, context string) (string, error) {
+	binPath, err := platform.NodeBinary(ver)
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(binPath); os.IsNotExist(err) {
+		if context != "" {
+			return "", fmt.Errorf("Node %s (%s) is not installed. Run `driftr install node@%s`", ver, context, ver)
+		}
+		return "", fmt.Errorf("Node %s is not installed. Run `driftr install node@%s`", ver, ver)
+	}
+	return binPath, nil
+}
 
 // Source describes where a version resolution came from.
 type Source int
 
 const (
 	SourceExplicit    Source = iota
-	SourceProject           // .driftr.toml
-	SourcePackageJSON       // package.json driftr.node
+	SourceProject            // .driftr.toml
+	SourcePackageJSON        // package.json driftr.node
 	SourceGlobal
 )
 
@@ -104,19 +136,14 @@ func ResolveNodeVerbose(explicit string, verbose bool) (*Resolution, error) {
 	return res, nil
 }
 
-func resolveExplicit(version string) (*Resolution, error) {
-	binPath, err := platform.NodeBinary(version)
+func resolveExplicit(ver string) (*Resolution, error) {
+	binPath, err := requireBinaryExists(ver, "")
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Node %s is not installed. Run `driftr install node@%s`", version, version)
-	}
-
 	return &Resolution{
 		Tool:       "node",
-		Version:    version,
+		Version:    ver,
 		BinaryPath: binPath,
 		Source:     SourceExplicit,
 	}, nil
@@ -170,20 +197,14 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 	return nil, nil
 }
 
-func resolveProjectVersion(version, dir string, source Source) (*Resolution, error) {
-	binPath, err := platform.NodeBinary(version)
+func resolveProjectVersion(ver, dir string, source Source) (*Resolution, error) {
+	binPath, err := requireBinaryExists(ver, "pinned in "+dir)
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Node %s (pinned in %s) is not installed. Run `driftr install node@%s`",
-			version, dir, version)
-	}
-
 	return &Resolution{
 		Tool:       "node",
-		Version:    version,
+		Version:    ver,
 		BinaryPath: binPath,
 		Source:     source,
 		ProjectDir: dir,
@@ -200,20 +221,14 @@ func resolveFromGlobal() (*Resolution, error) {
 		return nil, fmt.Errorf("no Node.js version configured. Run `driftr install node@<version>` and `driftr default node@<version>`")
 	}
 
-	version := cfg.Default.Node
-	binPath, err := platform.NodeBinary(version)
+	ver := cfg.Default.Node
+	binPath, err := requireBinaryExists(ver, "global default")
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Node %s (global default) is not installed. Run `driftr install node@%s`",
-			version, version)
-	}
-
 	return &Resolution{
 		Tool:       "node",
-		Version:    version,
+		Version:    ver,
 		BinaryPath: binPath,
 		Source:     SourceGlobal,
 	}, nil
@@ -225,15 +240,5 @@ func ResolveBinary(tool string, explicit string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	switch tool {
-	case "node":
-		return res.BinaryPath, nil
-	case "npm":
-		return platform.NpmBinary(res.Version)
-	case "npx":
-		return platform.NpxBinary(res.Version)
-	default:
-		return "", fmt.Errorf("unknown tool: %s", tool)
-	}
+	return platform.ToolBinary(tool, res.Version)
 }

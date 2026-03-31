@@ -6,11 +6,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
 const nodeDistBaseURL = "https://nodejs.org/dist"
+
+// httpClient is the shared HTTP client for all installer network operations.
+var httpClient = &http.Client{Timeout: 120 * time.Second}
 
 // DownloadURL returns the download URL for a given Node.js version.
 func DownloadURL(version string) string {
@@ -52,7 +56,7 @@ func Download(version string, verbose bool) (string, error) {
 		fmt.Printf("  Downloading: %s\n", url)
 	}
 
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("download failed: %w", err)
 	}
