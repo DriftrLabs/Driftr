@@ -1,6 +1,6 @@
 # Configuration
 
-Driftr uses TOML configuration files at two levels: global and per-project.
+Driftr uses configuration at two levels: global (`config.toml`) and per-project (`.driftr.toml` or `package.json`).
 
 ## Global Configuration
 
@@ -38,62 +38,75 @@ node = "22.14.0"
 
 ## Project Configuration
 
+Driftr supports two project config formats. On first `driftr pin`, you choose which to use. The choice is auto-detected on subsequent runs.
+
+### Option 1: `.driftr.toml` (recommended)
+
 **Location:** `.driftr.toml` in the project root
-
-This file pins tool versions for a specific project. It is created and managed by `driftr pin`.
-
-### Format
 
 ```toml
 [tools]
 node = "22.14.0"
 ```
-
-### Fields
 
 | Section | Key | Type | Description |
 |---------|-----|------|-------------|
 | `[tools]` | `node` | string | Pinned Node.js version for this project |
 
-### Example
+### Option 2: `package.json`
 
-After running:
+**Location:** `driftr` key in an existing `package.json`
+
+```json
+{
+  "name": "my-project",
+  "driftr": {
+    "node": "22.14.0"
+  }
+}
+```
+
+| Key            | Type   | Description                              |
+|----------------|--------|------------------------------------------|
+| `driftr.node`  | string | Pinned Node.js version for this project  |
+
+This format is useful when you want to keep all project tooling config in `package.json` without an extra dotfile.
+
+**Note:** `package.json` must already exist — Driftr will not create it. Run `npm init` first if needed.
+
+### Migrating Between Formats
 
 ```bash
-cd my-project
-driftr pin node@22.14.0
+# Switch from current format to the other
+driftr pin node@22.14.0 --migrate
 ```
 
-A `.driftr.toml` file is created in the current directory:
-
-```toml
-[tools]
-node = "22.14.0"
-```
+This writes the version in the new format and removes the old config (deletes `.driftr.toml` or removes the `driftr` key from `package.json`).
 
 ### Directory Walk Behavior
 
-When resolving a version, Driftr searches for `.driftr.toml` starting from the current working directory and walking up to the filesystem root.
+When resolving a version, Driftr walks up from the current directory to the filesystem root. In each directory, it checks `.driftr.toml` first, then `package.json`:
 
 ```
-/home/user/my-project/packages/core/   <- cwd, no .driftr.toml
-/home/user/my-project/packages/        <- no .driftr.toml
+/home/user/my-project/packages/core/   <- cwd, no config
+/home/user/my-project/packages/        <- no config
 /home/user/my-project/                 <- .driftr.toml found! uses this
 ```
 
+If `.driftr.toml` and `package.json` both exist in the same directory, `.driftr.toml` takes priority.
+
 This means:
-- You only need one `.driftr.toml` at the project root
+
+- You only need one config at the project root
 - All subdirectories inherit the pinned version
-- A nested `.driftr.toml` overrides the parent
+- A nested config overrides the parent
 
 ### Version Control
 
-The `.driftr.toml` file **should be committed** to version control. This ensures all team members use the same Node.js version for the project.
-
-Add it to your project:
+Your project config (`.driftr.toml` or `package.json`) **should be committed** to version control. This ensures all team members use the same Node.js version.
 
 ```bash
-git add .driftr.toml
+git add .driftr.toml   # or package.json
 git commit -m "Pin Node.js version with Driftr"
 ```
 
@@ -137,9 +150,8 @@ driftr install node@22.14.0
 The configuration format is designed for extension. Future versions may add:
 
 - `.nvmrc` and `.node-version` file support as alternative resolution sources
-- Package manager pinning (`pnpm`, `yarn`) in `.driftr.toml`
+- Package manager pinning (`pnpm`, `yarn`) in `.driftr.toml` and `package.json`
 - Mirror configuration for custom download sources
-- `package.json` `engines` field support
 
 ```toml
 # Future .driftr.toml (not yet supported)

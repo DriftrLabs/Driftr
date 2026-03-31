@@ -43,6 +43,7 @@ internal/
   config/                   configuration management
     global.go               ~/.driftr/config/config.toml read/write
     project.go              .driftr.toml read/write + directory walk
+    packagejson.go          package.json driftr key read/write
 
   installer/                Node.js installation pipeline
     node.go                 orchestrates install: resolve → download → verify → extract
@@ -51,7 +52,7 @@ internal/
     checksum.go             SHA256 verification against SHASUMS256.txt
 
   resolver/                 version resolution engine
-    resolver.go             resolution chain: explicit → project → global
+    resolver.go             resolution chain: explicit → project → package.json → global
 
   shim/                     shim script generation
     shim.go                 creates shell scripts in ~/.driftr/bin/
@@ -95,7 +96,10 @@ The resolver follows a strict priority order:
 
 1. **Explicit** -- `--node` flag on `driftr run`
 2. **Project** -- `.driftr.toml` found by walking up from `cwd`
-3. **Global** -- `~/.driftr/config/config.toml`
+3. **package.json** -- `driftr` key in `package.json`, same walk-up
+4. **Global** -- `~/.driftr/config/config.toml`
+
+In each directory, `.driftr.toml` is checked before `package.json`. The closest config to the working directory wins, regardless of format.
 
 There is no system fallback by default. If no version is configured, Driftr returns an actionable error message. This is intentional: implicit fallback to a system Node would undermine the determinism guarantee.
 
@@ -144,6 +148,7 @@ $ node app.js
         ├─ resolver.ResolveBinary("node", "")
         │   ├─ check explicit override         → none
         │   ├─ walk dirs for .driftr.toml      → found at /project/.driftr.toml
+        │   ├─ (or package.json driftr key)
         │   └─ return /tools/node/22.14.0/bin/node
         │
         └─ syscall.Exec(node, ["node", "app.js"], env)
