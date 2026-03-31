@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kisztof/driftr/internal/config"
-	"github.com/kisztof/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/config"
+	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
 // Source describes where a version resolution came from.

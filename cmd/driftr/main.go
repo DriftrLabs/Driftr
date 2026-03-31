@@ -1,6 +1,6 @@
 package main
 
-import "github.com/kisztof/driftr/internal/cli"
+import "github.com/DriftrLabs/driftr/internal/cli"
 
 func main() {
 	cli.Execute()

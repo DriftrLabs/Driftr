@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kisztof/driftr/internal/process"
-	"github.com/kisztof/driftr/internal/resolver"
+	"github.com/DriftrLabs/driftr/internal/process"
+	"github.com/DriftrLabs/driftr/internal/resolver"
 	"github.com/spf13/cobra"
 )
 

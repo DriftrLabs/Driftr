@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
-	"github.com/kisztof/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
 // GlobalConfig represents ~/.driftr/config/config.toml

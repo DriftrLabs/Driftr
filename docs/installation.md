@@ -13,7 +13,7 @@ Driftr is written in Go. You need Go 1.23 or later to build it.
 ### Clone and Build
 
 ```bash
-git clone https://github.com/kisztof/driftr.git
+git clone https://github.com/DriftrLabs/driftr.git
 cd driftr
 go build -o driftr ./cmd/driftr/
 ```
@@ -29,7 +29,7 @@ sudo mv driftr /usr/local/bin/
 Or install it directly with Go:
 
 ```bash
-go install github.com/kisztof/driftr/cmd/driftr@latest
+go install github.com/DriftrLabs/driftr/cmd/driftr@latest
 ```
 
 ## Initial Setup

@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kisztof/driftr/internal/platform"
-	"github.com/kisztof/driftr/internal/version"
+	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/version"
 )
 
 const nodeIndexURL = "https://nodejs.org/dist/index.json"

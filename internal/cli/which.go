@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/kisztof/driftr/internal/resolver"
+	"github.com/DriftrLabs/driftr/internal/resolver"
 	"github.com/spf13/cobra"
 )
 

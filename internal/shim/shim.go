@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/kisztof/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
 // shimTools lists the tools for which shims are created in MVP.

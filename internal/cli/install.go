@@ -3,7 +3,7 @@ package cli
 import (
 	"fmt"
 
-	"github.com/kisztof/driftr/internal/installer"
+	"github.com/DriftrLabs/driftr/internal/installer"
 	"github.com/spf13/cobra"
 )
 

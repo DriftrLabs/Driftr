@@ -1,4 +1,4 @@
-module github.com/kisztof/driftr
+module github.com/DriftrLabs/driftr
 
 go 1.23.0
 

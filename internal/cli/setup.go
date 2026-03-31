@@ -3,8 +3,8 @@ package cli
 import (
 	"fmt"
 
-	"github.com/kisztof/driftr/internal/platform"
-	"github.com/kisztof/driftr/internal/shim"
+	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/shim"
 	"github.com/spf13/cobra"
 )
 

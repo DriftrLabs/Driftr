@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kisztof/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
 const nodeDistBaseURL = "https://nodejs.org/dist"

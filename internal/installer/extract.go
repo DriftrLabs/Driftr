@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kisztof/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
 // Extract unpacks the downloaded archive into the tools directory.
