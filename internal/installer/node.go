@@ -5,11 +5,62 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"sync"
+	"syscall"
 
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/version"
 )
+
+// installCleanup tracks resources that need cleanup if the install is
+// interrupted by a signal. All fields are guarded by mu.
+type installCleanup struct {
+	mu      sync.Mutex
+	tmpFile string // temp download file (driftr-download-*)
+	version string // version being installed (partial extraction dir)
+	verbose bool
+}
+
+func (c *installCleanup) setTmpFile(path string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.tmpFile = path
+}
+
+func (c *installCleanup) clearTmpFile() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.tmpFile = ""
+}
+
+func (c *installCleanup) setVersion(v string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.version = v
+}
+
+// run removes any tracked temp files and partial installs.
+// Safe to call multiple times or concurrently.
+func (c *installCleanup) run() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.tmpFile != "" {
+		os.Remove(c.tmpFile)
+		c.tmpFile = ""
+	}
+	if c.version != "" {
+		dir, err := platform.NodeVersionDir(c.version)
+		if err == nil {
+			if c.verbose {
+				fmt.Fprintf(os.Stderr, "  Cleaning up partial install: %s\n", dir)
+			}
+			os.RemoveAll(dir)
+		}
+		c.version = ""
+	}
+}
 
 const nodeIndexURL = "https://nodejs.org/dist/index.json"
 
@@ -52,36 +103,49 @@ func Install(versionStr string, verbose bool) (string, error) {
 		return resolvedVersion, nil
 	}
 
-	archivePath, err := Download(resolvedVersion, verbose)
+	// Set up signal-aware cleanup for temp files and partial installs.
+	cleanup := &installCleanup{verbose: verbose}
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-sigChan:
+			fmt.Fprintf(os.Stderr, "\nInterrupted, cleaning up...\n")
+			cleanup.run()
+			os.Exit(1)
+		case <-done:
+		}
+	}()
+	defer func() {
+		signal.Stop(sigChan)
+		close(done)
+	}()
+
+	cleanup.setVersion(resolvedVersion)
+
+	archivePath, err := Download(resolvedVersion, verbose, cleanup)
 	if err != nil {
+		cleanup.run()
 		return "", err
 	}
 
 	if err := VerifyChecksum(archivePath, resolvedVersion, verbose); err != nil {
 		// Remove corrupted cached archive so next attempt re-downloads.
 		os.Remove(archivePath)
+		cleanup.run()
 		return "", fmt.Errorf("checksum verification failed: %w", err)
 	}
 
 	if err := Extract(archivePath, resolvedVersion, verbose); err != nil {
-		// Clean up partial extraction so it doesn't look installed.
-		cleanupFailedInstall(resolvedVersion, verbose)
+		cleanup.run()
 		return "", err
 	}
 
-	return resolvedVersion, nil
-}
+	// Success — nothing to clean up.
+	cleanup.setVersion("")
 
-// cleanupFailedInstall removes a partially extracted version directory.
-func cleanupFailedInstall(version string, verbose bool) {
-	dir, err := platform.NodeVersionDir(version)
-	if err != nil {
-		return
-	}
-	if verbose {
-		fmt.Printf("  Cleaning up partial install: %s\n", dir)
-	}
-	os.RemoveAll(dir)
+	return resolvedVersion, nil
 }
 
 // resolveLatestVersion finds the latest Node.js release matching a partial version.

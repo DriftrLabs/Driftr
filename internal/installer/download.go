@@ -30,7 +30,8 @@ func ArchiveFilename(version string) string {
 
 // Download fetches the Node.js archive to the cache directory.
 // Returns the path to the downloaded file.
-func Download(version string, verbose bool) (string, error) {
+// If cleanup is non-nil, the temp file path is registered for signal-safe removal.
+func Download(version string, verbose bool, cleanup *installCleanup) (string, error) {
 	cacheDir, err := platform.CacheDir()
 	if err != nil {
 		return "", err
@@ -75,16 +76,32 @@ func Download(version string, verbose bool) (string, error) {
 	}
 	tmpPath := tmpFile.Name()
 
+	// Register temp file for signal-safe cleanup.
+	if cleanup != nil {
+		cleanup.setTmpFile(tmpPath)
+	}
+
 	_, err = io.Copy(tmpFile, resp.Body)
 	tmpFile.Close()
 	if err != nil {
 		os.Remove(tmpPath)
+		if cleanup != nil {
+			cleanup.clearTmpFile()
+		}
 		return "", fmt.Errorf("download interrupted: %w", err)
 	}
 
 	if err := os.Rename(tmpPath, destPath); err != nil {
 		os.Remove(tmpPath)
+		if cleanup != nil {
+			cleanup.clearTmpFile()
+		}
 		return "", fmt.Errorf("failed to save archive: %w", err)
+	}
+
+	// Temp file has been renamed to final path — no longer needs cleanup.
+	if cleanup != nil {
+		cleanup.clearTmpFile()
 	}
 
 	return destPath, nil
