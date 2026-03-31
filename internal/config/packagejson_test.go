@@ -7,10 +7,16 @@ import (
 	"testing"
 )
 
+func writePackageJSON(t *testing.T, dir, content string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write test package.json: %v", err)
+	}
+}
+
 func TestLoadPackageJSON_DriftrNode(t *testing.T) {
 	dir := t.TempDir()
-	content := `{"name": "myapp", "driftr": {"node": "20.11.0"}}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0o644)
+	writePackageJSON(t, dir, `{"name": "myapp", "driftr": {"node": "20.11.0"}}`)
 
 	pkg, err := LoadPackageJSON(dir)
 	if err != nil {
@@ -26,8 +32,7 @@ func TestLoadPackageJSON_DriftrNode(t *testing.T) {
 
 func TestLoadPackageJSON_NoDriftr(t *testing.T) {
 	dir := t.TempDir()
-	content := `{"name": "myapp", "version": "1.0.0"}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0o644)
+	writePackageJSON(t, dir, `{"name": "myapp", "version": "1.0.0"}`)
 
 	pkg, err := LoadPackageJSON(dir)
 	if err != nil {
@@ -40,8 +45,7 @@ func TestLoadPackageJSON_NoDriftr(t *testing.T) {
 
 func TestLoadPackageJSON_EmptyDriftrNode(t *testing.T) {
 	dir := t.TempDir()
-	content := `{"driftr": {"node": ""}}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0o644)
+	writePackageJSON(t, dir, `{"driftr": {"node": ""}}`)
 
 	pkg, err := LoadPackageJSON(dir)
 	if err != nil {
@@ -66,7 +70,7 @@ func TestLoadPackageJSON_NoFile(t *testing.T) {
 
 func TestLoadPackageJSON_InvalidJSON(t *testing.T) {
 	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte("{invalid"), 0o644)
+	writePackageJSON(t, dir, "{invalid")
 
 	_, err := LoadPackageJSON(dir)
 	if err == nil {
@@ -76,8 +80,7 @@ func TestLoadPackageJSON_InvalidJSON(t *testing.T) {
 
 func TestSavePackageJSON_AddsKey(t *testing.T) {
 	dir := t.TempDir()
-	original := `{"name": "myapp", "version": "1.0.0"}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(original), 0o644)
+	writePackageJSON(t, dir, `{"name": "myapp", "version": "1.0.0"}`)
 
 	if err := SavePackageJSON(dir, "22.14.0"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -95,7 +98,9 @@ func TestSavePackageJSON_AddsKey(t *testing.T) {
 		t.Fatal("driftr key missing from package.json")
 	}
 	var dc DriftrConfig
-	json.Unmarshal(driftrRaw, &dc)
+	if err := json.Unmarshal(driftrRaw, &dc); err != nil {
+		t.Fatalf("failed to unmarshal driftr config: %v", err)
+	}
 	if dc.Node != "22.14.0" {
 		t.Errorf("got %q, want %q", dc.Node, "22.14.0")
 	}
@@ -111,8 +116,7 @@ func TestSavePackageJSON_AddsKey(t *testing.T) {
 
 func TestSavePackageJSON_UpdatesExisting(t *testing.T) {
 	dir := t.TempDir()
-	original := `{"name": "myapp", "driftr": {"node": "20.0.0"}}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(original), 0o644)
+	writePackageJSON(t, dir, `{"name": "myapp", "driftr": {"node": "20.0.0"}}`)
 
 	if err := SavePackageJSON(dir, "22.14.0"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -138,8 +142,7 @@ func TestSavePackageJSON_NoFile(t *testing.T) {
 
 func TestRemoveDriftrFromPackageJSON(t *testing.T) {
 	dir := t.TempDir()
-	original := `{"name": "myapp", "driftr": {"node": "20.0.0"}}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(original), 0o644)
+	writePackageJSON(t, dir, `{"name": "myapp", "driftr": {"node": "20.0.0"}}`)
 
 	if err := RemoveDriftrFromPackageJSON(dir); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -147,7 +150,9 @@ func TestRemoveDriftrFromPackageJSON(t *testing.T) {
 
 	data, _ := os.ReadFile(filepath.Join(dir, "package.json"))
 	var raw map[string]json.RawMessage
-	json.Unmarshal(data, &raw)
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("failed to unmarshal result: %v", err)
+	}
 
 	if _, ok := raw["driftr"]; ok {
 		t.Error("driftr key should have been removed")
@@ -167,8 +172,7 @@ func TestRemoveDriftrFromPackageJSON_NoFile(t *testing.T) {
 
 func TestRemoveDriftrFromPackageJSON_NoDriftrKey(t *testing.T) {
 	dir := t.TempDir()
-	original := `{"name": "myapp"}`
-	os.WriteFile(filepath.Join(dir, "package.json"), []byte(original), 0o644)
+	writePackageJSON(t, dir, `{"name": "myapp"}`)
 
 	if err := RemoveDriftrFromPackageJSON(dir); err != nil {
 		t.Fatalf("expected nil error when no driftr key, got: %v", err)
