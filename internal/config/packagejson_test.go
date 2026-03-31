@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -176,5 +177,115 @@ func TestRemoveDriftrFromPackageJSON_NoDriftrKey(t *testing.T) {
 
 	if err := RemoveDriftrFromPackageJSON(dir); err != nil {
 		t.Fatalf("expected nil error when no driftr key, got: %v", err)
+	}
+}
+
+func readPackageJSONBytes(t *testing.T, dir string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(dir, "package.json"))
+	if err != nil {
+		t.Fatalf("failed to read package.json: %v", err)
+	}
+	return data
+}
+
+func TestSavePackageJSON_PreservesKeyOrder(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{
+  "name": "myapp",
+  "version": "1.0.0",
+  "scripts": {"test": "jest"}
+}
+`)
+
+	if err := SavePackageJSON(dir, "22.14.0"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data := readPackageJSONBytes(t, dir)
+
+	nameIdx := bytes.Index(data, []byte(`"name"`))
+	versionIdx := bytes.Index(data, []byte(`"version"`))
+	scriptsIdx := bytes.Index(data, []byte(`"scripts"`))
+	driftrIdx := bytes.Index(data, []byte(`"driftr"`))
+
+	if nameIdx > versionIdx || versionIdx > scriptsIdx || scriptsIdx > driftrIdx {
+		t.Errorf("key order not preserved, want name < version < scripts < driftr:\n%s", data)
+	}
+}
+
+func TestSavePackageJSON_UpdatePreservesPosition(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{
+  "name": "myapp",
+  "driftr": {"node": "20.0.0"},
+  "version": "1.0.0"
+}
+`)
+
+	if err := SavePackageJSON(dir, "22.14.0"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data := readPackageJSONBytes(t, dir)
+
+	nameIdx := bytes.Index(data, []byte(`"name"`))
+	driftrIdx := bytes.Index(data, []byte(`"driftr"`))
+	versionIdx := bytes.Index(data, []byte(`"version"`))
+
+	if nameIdx > driftrIdx || driftrIdx > versionIdx {
+		t.Errorf("key order not preserved, want name < driftr < version:\n%s", data)
+	}
+}
+
+func TestRemoveDriftrFromPackageJSON_PreservesKeyOrder(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{
+  "name": "myapp",
+  "driftr": {"node": "20.0.0"},
+  "version": "1.0.0",
+  "scripts": {}
+}
+`)
+
+	if err := RemoveDriftrFromPackageJSON(dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data := readPackageJSONBytes(t, dir)
+
+	if bytes.Contains(data, []byte(`"driftr"`)) {
+		t.Error("driftr key should have been removed")
+	}
+
+	nameIdx := bytes.Index(data, []byte(`"name"`))
+	versionIdx := bytes.Index(data, []byte(`"version"`))
+	scriptsIdx := bytes.Index(data, []byte(`"scripts"`))
+
+	if nameIdx > versionIdx || versionIdx > scriptsIdx {
+		t.Errorf("key order not preserved, want name < version < scripts:\n%s", data)
+	}
+}
+
+func TestSavePackageJSON_PreservesIndentation(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{
+    "name": "myapp",
+    "version": "1.0.0"
+}
+`)
+
+	if err := SavePackageJSON(dir, "22.14.0"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data := readPackageJSONBytes(t, dir)
+
+	// Should detect 4-space indent from the original file.
+	if !bytes.Contains(data, []byte("    \"name\"")) {
+		t.Errorf("expected 4-space indentation to be preserved:\n%s", data)
+	}
+	if !bytes.Contains(data, []byte("    \"driftr\"")) {
+		t.Errorf("expected driftr key to use same 4-space indentation:\n%s", data)
 	}
 }
