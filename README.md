@@ -24,18 +24,17 @@ Driftr manages Node.js versions so you don't have to think about them. Pin a ver
 - **Secure** -- SHA256 checksum verification on every download
 - **Simple** -- six commands cover the entire workflow
 
+## Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+```
+
+This downloads the latest release, verifies its checksum, and configures your PATH. See [docs/installation.md](docs/installation.md) for alternative methods.
+
 ## Quick Start
 
 ```bash
-# Build from source
-go build -o driftr ./cmd/driftr/
-
-# Initialize directories and shims
-driftr setup
-
-# Add shims to your PATH (add to ~/.zshrc or ~/.bashrc)
-export PATH="$HOME/.driftr/bin:$PATH"
-
 # Install Node.js
 driftr install node@22
 
@@ -112,9 +111,10 @@ The shim in `~/.driftr/bin/node` intercepts calls, the resolver determines the c
 
 ## Requirements
 
-- Go 1.23+ (to build from source)
 - macOS or Linux
+- `curl` or `wget` (for the install script)
 - Internet access (to download Node.js releases from nodejs.org)
+- Go 1.23+ (only if building from source)
 
 ## License
 
