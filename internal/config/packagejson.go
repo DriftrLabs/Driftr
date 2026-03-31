@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -55,22 +56,15 @@ func SavePackageJSON(dir string, nodeVersion string) error {
 		return fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", path, err)
-	}
-
 	driftrValue, err := json.Marshal(DriftrConfig{Node: nodeVersion})
 	if err != nil {
 		return err
 	}
-	raw["driftr"] = driftrValue
 
-	out, err := json.MarshalIndent(raw, "", "  ")
+	out, err := patchTopLevelKey(data, "driftr", driftrValue)
 	if err != nil {
-		return fmt.Errorf("failed to encode %s: %w", path, err)
+		return fmt.Errorf("failed to update %s: %w", path, err)
 	}
-	out = append(out, '\n')
 
 	return os.WriteFile(path, out, 0o644)
 }
@@ -88,21 +82,110 @@ func RemoveDriftrFromPackageJSON(dir string) error {
 		return fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return fmt.Errorf("failed to parse %s: %w", path, err)
-	}
-
-	if _, exists := raw["driftr"]; !exists {
+	// Quick check: if "driftr" doesn't appear at all, nothing to do.
+	if !bytes.Contains(data, []byte(`"driftr"`)) {
 		return nil
 	}
-	delete(raw, "driftr")
 
-	out, err := json.MarshalIndent(raw, "", "  ")
+	out, err := patchTopLevelKey(data, "driftr", nil)
 	if err != nil {
-		return fmt.Errorf("failed to encode %s: %w", path, err)
+		return fmt.Errorf("failed to update %s: %w", path, err)
 	}
-	out = append(out, '\n')
 
 	return os.WriteFile(path, out, 0o644)
+}
+
+// patchTopLevelKey modifies a top-level key in a JSON object, preserving key order.
+// If value is non-nil, the key is set (inserted at end if new, replaced in-place if existing).
+// If value is nil, the key is removed.
+func patchTopLevelKey(data []byte, key string, value json.RawMessage) ([]byte, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+
+	t, err := dec.Token()
+	if err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+	if t != json.Delim('{') {
+		return nil, fmt.Errorf("expected JSON object")
+	}
+
+	type kvPair struct {
+		key string
+		raw json.RawMessage
+	}
+
+	var pairs []kvPair
+	found := false
+
+	for dec.More() {
+		t, err := dec.Token()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read key: %w", err)
+		}
+		k, ok := t.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string key, got %T", t)
+		}
+
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return nil, fmt.Errorf("failed to read value for %q: %w", k, err)
+		}
+
+		if k == key {
+			found = true
+			if value != nil {
+				pairs = append(pairs, kvPair{k, value})
+			}
+			continue
+		}
+
+		pairs = append(pairs, kvPair{k, raw})
+	}
+
+	if !found && value != nil {
+		pairs = append(pairs, kvPair{key, value})
+	}
+
+	indent := detectIndent(data)
+
+	var buf bytes.Buffer
+	buf.WriteByte('{')
+	for i, p := range pairs {
+		buf.WriteByte('\n')
+		buf.WriteString(indent)
+		keyBytes, _ := json.Marshal(p.key)
+		buf.Write(keyBytes)
+		buf.WriteString(": ")
+		buf.Write(p.raw)
+		if i < len(pairs)-1 {
+			buf.WriteByte(',')
+		}
+	}
+	if len(pairs) > 0 {
+		buf.WriteByte('\n')
+	}
+	buf.WriteByte('}')
+	buf.WriteByte('\n')
+
+	return buf.Bytes(), nil
+}
+
+// detectIndent returns the whitespace used for indentation in a JSON file.
+// It looks at the whitespace after the first newline.
+func detectIndent(data []byte) string {
+	for i := 0; i < len(data); i++ {
+		if data[i] == '\n' {
+			j := i + 1
+			for j < len(data) && (data[j] == ' ' || data[j] == '\t') {
+				j++
+			}
+			if j > i+1 {
+				return string(data[i+1 : j])
+			}
+			break
+		}
+	}
+	return "  "
 }
