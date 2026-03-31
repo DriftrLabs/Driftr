@@ -1,5 +1,42 @@
 # Installation
 
+## Quick Install (recommended)
+
+Run the installer script to download the latest release, verify its checksum, and set up your PATH:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+```
+
+The script:
+
+1. Detects your OS and architecture
+2. Downloads the latest binary from GitHub Releases
+3. Verifies the SHA256 checksum
+4. Installs to `~/.driftr/bin/`
+5. Runs `driftr setup` to create directories and shims
+6. Adds `~/.driftr/bin` to your PATH
+
+### Options
+
+Pin a specific version:
+
+```bash
+DRIFTR_VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+```
+
+Override the install directory:
+
+```bash
+DRIFTR_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+```
+
+### Using wget
+
+```bash
+wget -qO- https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+```
+
 ## Building from Source
 
 Driftr is written in Go. You need Go 1.23 or later to build it.
