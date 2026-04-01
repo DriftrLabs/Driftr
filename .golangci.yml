@@ -1,0 +1,51 @@
+run:
+  timeout: 3m
+
+linters:
+  enable:
+    - errcheck       # unchecked errors
+    - govet          # go vet checks
+    - staticcheck    # advanced static analysis
+    - unused         # unused code
+    - gosimple       # simplifications
+    - ineffassign    # ineffectual assignments
+    - typecheck      # type checking
+    - gofmt          # formatting
+    - goimports      # import ordering
+    - misspell       # spelling mistakes in comments
+    - unconvert      # unnecessary type conversions
+    - unparam        # unused function parameters
+    - bodyclose      # unclosed HTTP response bodies
+    - nilerr         # returning nil after checking err != nil
+    - errname        # error variable naming (errFoo)
+    - errorlint      # error wrapping issues
+    - prealloc       # slice preallocation hints
+    - exportloopref  # loop variable capture issues
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/DriftrLabs/driftr
+
+  errcheck:
+    check-type-assertions: true
+
+  govet:
+    enable-all: true
+
+  misspell:
+    locale: US
+
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 5
+
+  exclude-rules:
+    # Allow unused parameters in test files
+    - path: _test\.go
+      linters:
+        - unparam
+
+    # Allow unchecked errors in test files
+    - path: _test\.go
+      linters:
+        - errcheck

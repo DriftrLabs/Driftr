@@ -23,9 +23,19 @@ jobs:
         with:
           go-version: "1.23"
           cache: true
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "Files not formatted with gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: Check go vet
+        run: go vet ./...
       - uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v2.1
 
   test:
     name: Test (${{ matrix.os }})

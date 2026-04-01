@@ -18,9 +18,9 @@ const registryBaseURL = "https://registry.npmjs.org"
 
 // registryPackage represents the top-level npm registry response for a package.
 type registryPackage struct {
-	Name     string                       `json:"name"`
-	DistTags map[string]string            `json:"dist-tags"`
-	Versions map[string]registryVersion   `json:"versions"`
+	Name     string                     `json:"name"`
+	DistTags map[string]string          `json:"dist-tags"`
+	Versions map[string]registryVersion `json:"versions"`
 }
 
 // registryVersion represents a single version from the npm registry.

@@ -18,8 +18,8 @@ type ProjectConfig struct {
 // ToolsConfig holds pinned tool versions for a project.
 // Supports both the legacy `node = "..."` field and a generic map.
 type ToolsConfig struct {
-	Node    string            `toml:"node,omitempty"`    // backwards compat
-	Entries map[string]string `toml:"-"`                 // populated after load
+	Node    string            `toml:"node,omitempty"` // backwards compat
+	Entries map[string]string `toml:"-"`              // populated after load
 }
 
 // GetTool returns the pinned version for a tool.
