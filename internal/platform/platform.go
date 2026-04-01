@@ -49,9 +49,6 @@ func NodeBinary(version string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if runtime.GOOS == "windows" {
-		return filepath.Join(dir, "node.exe"), nil
-	}
 	return filepath.Join(dir, "bin", "node"), nil
 }
 
@@ -61,9 +58,6 @@ func NpmBinary(version string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if runtime.GOOS == "windows" {
-		return filepath.Join(dir, "npm.cmd"), nil
-	}
 	return filepath.Join(dir, "bin", "npm"), nil
 }
 
@@ -72,9 +66,6 @@ func NpxBinary(version string) (string, error) {
 	dir, err := NodeVersionDir(version)
 	if err != nil {
 		return "", err
-	}
-	if runtime.GOOS == "windows" {
-		return filepath.Join(dir, "npx.cmd"), nil
 	}
 	return filepath.Join(dir, "bin", "npx"), nil
 }
@@ -141,8 +132,6 @@ func OS() string {
 		return "darwin"
 	case "linux":
 		return "linux"
-	case "windows":
-		return "win"
 	default:
 		return runtime.GOOS
 	}
@@ -164,8 +153,5 @@ func ToolBinary(tool, version string) (string, error) {
 
 // ArchiveExt returns the archive extension for the current platform.
 func ArchiveExt() string {
-	if runtime.GOOS == "windows" {
-		return "zip"
-	}
 	return "tar.gz"
 }
