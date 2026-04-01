@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23"
+          cache: true
 
       - name: Run tests
         run: go test -race ./...
@@ -38,7 +39,7 @@ jobs:
 
       - name: Create nightly release
         run: |
-          gh release create nightly dist/driftr_*.tar.gz dist/driftr_*.zip dist/checksums.txt \
+          gh release create nightly dist/driftr_*.tar.gz dist/checksums.txt \
             --title "Nightly $(date -u +%Y-%m-%d)" \
             --notes "Automated nightly build from \`$(git rev-parse --short HEAD)\` on main.
 
