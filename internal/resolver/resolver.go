@@ -149,6 +149,8 @@ func resolveExplicit(ver string) (*Resolution, error) {
 	}, nil
 }
 
+const maxResolveDepth = 20
+
 func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
@@ -158,7 +160,14 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 	// Walk up directories looking for .driftr.toml or package.json (volta),
 	// checking both in each directory before moving to the parent.
 	current := absDir
+	depth := 0
 	for {
+		if depth >= maxResolveDepth {
+			if verbose {
+				fmt.Printf("  [resolve]   Reached max depth (%d), stopping search\n", maxResolveDepth)
+			}
+			break
+		}
 		// Check .driftr.toml first.
 		cfgPath := filepath.Join(current, config.ProjectConfigFile)
 		if verbose {
@@ -187,6 +196,7 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 			return resolveProjectVersion(pkg.Driftr.Node, current, SourcePackageJSON)
 		}
 
+		depth++
 		parent := filepath.Dir(current)
 		if parent == current {
 			break
