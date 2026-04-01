@@ -338,10 +338,26 @@ var toolParent = map[string]string{
 	"npx": "node",
 }
 
+// ResolvedBinary holds the result of resolving a tool binary.
+type ResolvedBinary struct {
+	ToolPath string // path to the tool binary
+	NodePath string // path to node binary, set when the tool needs node to execute
+}
+
 // ResolveBinary resolves the full path to a tool binary.
 // For bundled tools (npm, npx), resolves via the parent tool (node).
 // For standalone tools (node, pnpm, yarn), resolves via their own version.
 func ResolveBinary(tool string, explicit string) (string, error) {
+	rb, err := ResolveBinaryFull(tool, explicit)
+	if err != nil {
+		return "", err
+	}
+	return rb.ToolPath, nil
+}
+
+// ResolveBinaryFull resolves a tool binary with dual resolution.
+// For tools that need Node.js (e.g. yarn), it also resolves the Node binary path.
+func ResolveBinaryFull(tool string, explicit string) (*ResolvedBinary, error) {
 	resolveTool := tool
 	if parent, ok := toolParent[tool]; ok {
 		resolveTool = parent
@@ -349,7 +365,29 @@ func ResolveBinary(tool string, explicit string) (string, error) {
 
 	res, err := ResolveTool(resolveTool, explicit, false)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return platform.ToolBinary(tool, res.Version)
+
+	toolPath, err := platform.ToolBinary(tool, res.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	rb := &ResolvedBinary{ToolPath: toolPath}
+
+	// Check if this tool needs Node.js to execute.
+	entry, ok := platform.LookupTool(tool)
+	if ok && entry.NeedsNode {
+		nodeRes, err := ResolveTool("node", "", false)
+		if err != nil {
+			return nil, fmt.Errorf("%s requires Node.js: %w", tool, err)
+		}
+		nodePath, err := platform.ToolBinary("node", nodeRes.Version)
+		if err != nil {
+			return nil, err
+		}
+		rb.NodePath = nodePath
+	}
+
+	return rb, nil
 }

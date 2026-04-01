@@ -22,13 +22,19 @@ func newShimCmd() *cobra.Command {
 			tool := args[0]
 			toolArgs := args[1:]
 
-			binPath, err := resolver.ResolveBinary(tool, "")
+			rb, err := resolver.ResolveBinaryFull(tool, "")
 			if err != nil {
 				return fmt.Errorf("error: %w", err)
 			}
 
-			// Use Exec to replace the process — preserves exit code, stdio, signals.
-			return process.Exec(binPath, toolArgs)
+			// For tools that need Node.js (e.g. yarn), exec node with the tool script.
+			if rb.NodePath != "" {
+				nodeArgs := append([]string{rb.ToolPath}, toolArgs...)
+				return process.Exec(rb.NodePath, nodeArgs)
+			}
+
+			// Standalone tools exec directly.
+			return process.Exec(rb.ToolPath, toolArgs)
 		},
 	}
 }
