@@ -9,7 +9,7 @@ import (
 )
 
 // shimTools lists the tools for which shims are created in MVP.
-var shimTools = []string{"node", "npm", "npx"}
+var shimTools = []string{"node", "npm", "npx", "pnpm", "pnpx", "yarn"}
 
 // GenerateShims creates shim shell scripts in ~/.driftr/bin/.
 // Each shim invokes `driftr shim <tool>` to resolve and exec the real binary.

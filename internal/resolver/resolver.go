@@ -331,9 +331,23 @@ func resolveFromGlobal(tool string) (*Resolution, error) {
 	}, nil
 }
 
-// ResolveBinary resolves the full path to a tool binary (node, npm, npx).
+// toolParent maps tools to the parent tool whose version controls resolution.
+// Tools not listed here resolve independently.
+var toolParent = map[string]string{
+	"npm": "node",
+	"npx": "node",
+}
+
+// ResolveBinary resolves the full path to a tool binary.
+// For bundled tools (npm, npx), resolves via the parent tool (node).
+// For standalone tools (node, pnpm, yarn), resolves via their own version.
 func ResolveBinary(tool string, explicit string) (string, error) {
-	res, err := ResolveNode(explicit)
+	resolveTool := tool
+	if parent, ok := toolParent[tool]; ok {
+		resolveTool = parent
+	}
+
+	res, err := ResolveTool(resolveTool, explicit, false)
 	if err != nil {
 		return "", err
 	}
