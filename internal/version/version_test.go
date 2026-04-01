@@ -69,6 +69,58 @@ func TestMajorMinor(t *testing.T) {
 	}
 }
 
+func TestParse_Latest(t *testing.T) {
+	tests := []string{"latest", "node@latest"}
+	for _, input := range tests {
+		t.Run(input, func(t *testing.T) {
+			v, err := Parse(input)
+			if err != nil {
+				t.Fatalf("Parse(%q) unexpected error: %v", input, err)
+			}
+			if !v.Latest {
+				t.Errorf("Parse(%q).Latest = false, want true", input)
+			}
+		})
+	}
+}
+
+func TestMatches(t *testing.T) {
+	tests := []struct {
+		pattern string
+		target  string
+		want    bool
+	}{
+		{"24", "24.14.1", true},
+		{"24", "24.0.0", true},
+		{"24", "22.14.0", false},
+		{"24.14", "24.14.1", true},
+		{"24.14", "24.14.0", true},
+		{"24.14", "24.13.0", false},
+		{"24.14", "22.14.0", false},
+		{"24.14.1", "24.14.1", true},
+		{"24.14.1", "24.14.0", false},
+		{"latest", "24.14.1", true},
+		{"latest", "22.0.0", true},
+		{"node@24", "24.14.1", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pattern+"_vs_"+tt.target, func(t *testing.T) {
+			p, err := Parse(tt.pattern)
+			if err != nil {
+				t.Fatalf("Parse(%q) error: %v", tt.pattern, err)
+			}
+			tgt, err := Parse(tt.target)
+			if err != nil {
+				t.Fatalf("Parse(%q) error: %v", tt.target, err)
+			}
+			if got := p.Matches(tgt); got != tt.want {
+				t.Errorf("Parse(%q).Matches(Parse(%q)) = %v, want %v", tt.pattern, tt.target, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestMatchesMajor(t *testing.T) {
 	a, _ := Parse("24.0.0")
 	b, _ := Parse("24.1.3")

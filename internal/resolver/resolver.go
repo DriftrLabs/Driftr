@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/DriftrLabs/driftr/internal/config"
 	"github.com/DriftrLabs/driftr/internal/platform"
@@ -11,18 +12,93 @@ import (
 )
 
 // RequireInstalled verifies a version string parses correctly and the version is installed.
-// Returns the normalized version string and binary path, or an actionable error.
+// For partial versions (e.g. "24", "24.14") and "latest", it finds the best matching
+// installed version. Returns the normalized version string and binary path, or an actionable error.
 func RequireInstalled(versionSpec string) (string, string, error) {
 	v, err := version.Parse(versionSpec)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid version: %w", err)
 	}
+
+	if v.Latest || v.IsPartial() {
+		return resolveInstalledPartial(v)
+	}
+
 	versionStr := v.String()
 	binPath, err := requireBinaryExists(versionStr, "")
 	if err != nil {
 		return "", "", err
 	}
 	return versionStr, binPath, nil
+}
+
+// resolveInstalledPartial finds the latest installed version matching a partial spec.
+func resolveInstalledPartial(v version.Version) (string, string, error) {
+	installed, err := listInstalledVersions()
+	if err != nil {
+		return "", "", err
+	}
+
+	var matches []version.Version
+	for _, verStr := range installed {
+		iv, err := version.Parse(verStr)
+		if err != nil {
+			continue
+		}
+		if v.Matches(iv) {
+			matches = append(matches, iv)
+		}
+	}
+
+	if len(matches) == 0 {
+		if v.Latest {
+			return "", "", fmt.Errorf("no Node.js versions installed. Run `driftr install node@<version>`")
+		}
+		return "", "", fmt.Errorf("no installed Node.js version matches %s. Run `driftr install node@%s`", v.Raw, v.Raw)
+	}
+
+	// Sort descending to pick the latest.
+	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].Major != matches[j].Major {
+			return matches[i].Major > matches[j].Major
+		}
+		if matches[i].Minor != matches[j].Minor {
+			return matches[i].Minor > matches[j].Minor
+		}
+		return matches[i].Patch > matches[j].Patch
+	})
+
+	best := matches[0].String()
+	binPath, err := requireBinaryExists(best, "")
+	if err != nil {
+		return "", "", err
+	}
+	return best, binPath, nil
+}
+
+// listInstalledVersions returns all installed Node.js version strings.
+func listInstalledVersions() ([]string, error) {
+	toolsDir, err := platform.ToolsDir()
+	if err != nil {
+		return nil, err
+	}
+
+	nodeDir := toolsDir + "/node"
+	entries, err := os.ReadDir(nodeDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read node versions: %w", err)
+	}
+
+	var versions []string
+	for _, e := range entries {
+		if e.IsDir() {
+			versions = append(versions, e.Name())
+		}
+	}
+	return versions, nil
 }
 
 // requireBinaryExists checks that the node binary for the given version is installed.

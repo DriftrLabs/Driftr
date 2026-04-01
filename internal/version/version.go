@@ -8,10 +8,11 @@ import (
 
 // Version represents a parsed semantic version.
 type Version struct {
-	Major int
-	Minor int
-	Patch int
-	Raw   string
+	Major  int
+	Minor  int
+	Patch  int
+	Raw    string
+	Latest bool // true when input was "latest" or "node@latest"
 }
 
 // Parse parses a version string like "24", "24.0", or "24.0.1".
@@ -24,6 +25,10 @@ func Parse(s string) (Version, error) {
 
 	if s == "" {
 		return Version{}, fmt.Errorf("empty version string")
+	}
+
+	if s == "latest" {
+		return Version{Raw: raw, Latest: true}, nil
 	}
 
 	parts := strings.SplitN(s, ".", 3)
@@ -70,6 +75,31 @@ func (v Version) String() string {
 // MajorMinor returns "MAJOR.MINOR" format.
 func (v Version) MajorMinor() string {
 	return fmt.Sprintf("%d.%d", v.Major, v.Minor)
+}
+
+// Matches returns true if v (potentially partial) matches other (full version).
+// "24" matches any 24.x.x, "24.14" matches any 24.14.x, "24.14.1" is exact.
+// A Latest version matches everything.
+func (v Version) Matches(other Version) bool {
+	if v.Latest {
+		return true
+	}
+	if v.Major != other.Major {
+		return false
+	}
+	raw := strings.TrimPrefix(v.Raw, "node@")
+	raw = strings.TrimPrefix(raw, "v")
+	parts := strings.Split(raw, ".")
+	if len(parts) == 1 {
+		return true // major-only match
+	}
+	if v.Minor != other.Minor {
+		return false
+	}
+	if len(parts) == 2 {
+		return true // major.minor match
+	}
+	return v.Patch == other.Patch
 }
 
 // MatchesMajor returns true if the other version has the same major version.
