@@ -3,8 +3,9 @@ package cli
 import (
 	"fmt"
 
-	"github.com/DriftrLabs/driftr/internal/installer"
 	"github.com/spf13/cobra"
+
+	"github.com/DriftrLabs/driftr/internal/installer"
 )
 
 func newInstallCmd() *cobra.Command {
