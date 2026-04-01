@@ -3,8 +3,9 @@ package cli
 import (
 	"fmt"
 
-	"github.com/DriftrLabs/driftr/internal/updater"
 	"github.com/spf13/cobra"
+
+	"github.com/DriftrLabs/driftr/internal/updater"
 )
 
 func newUpdateCmd() *cobra.Command {

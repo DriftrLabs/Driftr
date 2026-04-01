@@ -94,8 +94,8 @@ func detectPinFormat(dir string) pinFormat {
 // promptPinFormat asks the user to choose a storage format.
 func promptPinFormat(cmd *cobra.Command) (pinFormat, error) {
 	// Non-interactive: default to .driftr.toml.
-	stat, _ := os.Stdin.Stat()
-	if (stat.Mode() & os.ModeCharDevice) == 0 {
+	stat, err := os.Stdin.Stat()
+	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 {
 		return formatTOML, nil
 	}
 
