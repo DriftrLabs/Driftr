@@ -29,10 +29,8 @@ linters:
         - fmt.Print
         - fmt.Println
         - fmt.Printf
-        - (io.Closer).Close
         - os.Remove
         - os.RemoveAll
-        - (net/http.Response.Body).Close
 
     govet:
       enable-all: true
@@ -45,6 +43,9 @@ linters:
       - path: _test\.go
         linters:
           - unparam
+          - errcheck
+      - text: "Error return value of .+Close"
+        linters:
           - errcheck
 
 formatters:
