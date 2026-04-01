@@ -65,23 +65,15 @@ All commands support `-v` / `--verbose` for detailed output including resolver t
 
 ## How It Works
 
-```
-                    ┌─────────────┐
-  $ node app.js ──> │  shim (bin/) │
-                    └──────┬──────┘
-                           │
-                    ┌──────▼──────┐
-                    │   resolver   │
-                    │              │
-                    │ 1. explicit  │
-                    │ 2. project   │  walks up dirs for .driftr.toml
-                    │ 3. pkg.json  │  walks up dirs for package.json driftr key
-                    │ 4. global    │  reads ~/.driftr/config/config.toml
-                    └──────┬──────┘
-                           │
-                    ┌──────▼──────┐
-                    │ syscall.Exec │  replaces process with real node
-                    └─────────────┘
+```mermaid
+flowchart TD
+    A["$ node app.js"] --> B["shim (bin/)"]
+    B --> C["resolver"]
+    C --> C1["1. explicit flag"]
+    C --> C2["2. .driftr.toml\n(walks up dirs)"]
+    C --> C3["3. package.json driftr key\n(walks up dirs)"]
+    C --> C4["4. global config.toml"]
+    C1 & C2 & C3 & C4 --> D["syscall.Exec\nreplaces process with real node"]
 ```
 
 The shim in `~/.driftr/bin/node` intercepts calls, the resolver determines the correct version, and `syscall.Exec` replaces the process with the real Node.js binary. No child process, no signal forwarding, no overhead.
