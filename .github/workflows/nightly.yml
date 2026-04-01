@@ -25,7 +25,7 @@ jobs:
         run: go test -race ./...
 
       - name: Build snapshot
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
           args: release --snapshot --clean
@@ -39,7 +39,7 @@ jobs:
 
       - name: Create nightly release
         run: |
-          gh release create nightly dist/driftr_*.tar.gz dist/checksums.txt \
+          gh release create nightly dist/*.tar.gz dist/checksums.txt \
             --title "Nightly $(date -u +%Y-%m-%d)" \
             --notes "Automated nightly build from \`$(git rev-parse --short HEAD)\` on main.
 
