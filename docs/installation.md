@@ -81,10 +81,10 @@ This creates the following structure:
 
 ```
 ~/.driftr/
-  bin/           shim scripts (node, npm, npx)
-  tools/node/    installed Node.js versions
+  bin/           shim scripts (node, npm, npx, pnpm, pnpx, yarn)
+  tools/         installed tool versions
   config/        global configuration
-  cache/         downloaded archives
+  cache/         downloaded archives + binaries
 ```
 
 ## PATH Configuration

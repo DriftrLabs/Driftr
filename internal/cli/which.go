@@ -17,7 +17,7 @@ func newWhichCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tool := args[0]
 
-			res, err := resolver.ResolveTool("node", "", verbose)
+			res, err := resolver.ResolveTool(tool, "", verbose)
 			if err != nil {
 				return err
 			}

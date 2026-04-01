@@ -6,20 +6,26 @@ Driftr uses configuration at two levels: global (`config.toml`) and per-project 
 
 **Location:** `~/.driftr/config/config.toml`
 
-This file stores your global default Node.js version. It is created and managed by `driftr default`.
+This file stores your global default tool versions. It is created and managed by `driftr default`.
 
 ### Format
 
 ```toml
 [default]
 node = "22.14.0"
+
+[default.tools]
+pnpm = "9.15.0"
+yarn = "1.22.22"
 ```
 
 ### Fields
 
-| Section | Key | Type | Description |
-|---------|-----|------|-------------|
-| `[default]` | `node` | string | Global default Node.js version |
+| Section           | Key    | Type   | Description                     |
+|-------------------|--------|--------|---------------------------------|
+| `[default]`       | `node` | string | Global default Node.js version  |
+| `[default.tools]` | `pnpm` | string | Global default pnpm version     |
+| `[default.tools]` | `yarn` | string | Global default yarn version     |
 
 ### Example
 
@@ -27,14 +33,10 @@ After running:
 
 ```bash
 driftr default node@22.14.0
+driftr default pnpm@9.15.0
 ```
 
-The config file will contain:
-
-```toml
-[default]
-node = "22.14.0"
-```
+The config file will contain both tool defaults.
 
 ## Project Configuration
 
@@ -47,11 +49,14 @@ Driftr supports two project config formats. On first `driftr pin`, you choose wh
 ```toml
 [tools]
 node = "22.14.0"
+pnpm = "9.15.0"
 ```
 
-| Section | Key | Type | Description |
-|---------|-----|------|-------------|
-| `[tools]` | `node` | string | Pinned Node.js version for this project |
+| Section   | Key    | Type   | Description                                |
+|-----------|--------|--------|--------------------------------------------|
+| `[tools]` | `node` | string | Pinned Node.js version for this project    |
+| `[tools]` | `pnpm` | string | Pinned pnpm version for this project       |
+| `[tools]` | `yarn` | string | Pinned yarn version for this project       |
 
 ### Option 2: `package.json`
 
@@ -71,6 +76,8 @@ node = "22.14.0"
 | `driftr.node`  | string | Pinned Node.js version for this project  |
 
 This format is useful when you want to keep all project tooling config in `package.json` without an extra dotfile.
+
+**Note:** The `package.json` format currently only supports `node`. For pnpm and yarn pinning, use `.driftr.toml`.
 
 **Note:** `package.json` must already exist — Driftr will not create it. Run `npm init` first if needed.
 
@@ -103,7 +110,7 @@ This means:
 
 ### Version Control
 
-Your project config (`.driftr.toml` or `package.json`) **should be committed** to version control. This ensures all team members use the same Node.js version.
+Your project config (`.driftr.toml` or `package.json`) **should be committed** to version control. This ensures all team members use the same tool versions.
 
 ```bash
 git add .driftr.toml   # or package.json
@@ -120,20 +127,27 @@ Driftr stores all data under `~/.driftr/`:
     node                      shell script -> driftr shim node
     npm                       shell script -> driftr shim npm
     npx                       shell script -> driftr shim npx
+    pnpm                      shell script -> driftr shim pnpm
+    pnpx                      shell script -> driftr shim pnpx
+    yarn                      shell script -> driftr shim yarn
   tools/
     node/
-      22.14.0/                extracted Node.js installation
-        bin/
-          node
-          npm
-          npx
+      22.14.0/
+        bin/node, npm, npx
+    pnpm/
+      9.15.0/
+        bin/pnpm, pnpx (symlink)
+    yarn/
+      1.22.22/
+        bin/yarn.js
         lib/
-        include/
-      24.0.0/
+        package.json
   config/
     config.toml               global configuration
   cache/
-    node-v22.14.0-*.tar.gz    cached downloads
+    node-v22.14.0-*.tar.gz    cached Node.js archives
+    pnpm-9.15.0-*             cached pnpm binaries
+    yarn-1.22.22.tgz          cached yarn tarballs
 ```
 
 ### Cache
@@ -150,12 +164,5 @@ driftr install node@22.14.0
 The configuration format is designed for extension. Future versions may add:
 
 - `.nvmrc` and `.node-version` file support as alternative resolution sources
-- Package manager pinning (`pnpm`, `yarn`) in `.driftr.toml` and `package.json`
+- pnpm and yarn pinning in `package.json` format (currently `.driftr.toml` only)
 - Mirror configuration for custom download sources
-
-```toml
-# Future .driftr.toml (not yet supported)
-[tools]
-node = "22.14.0"
-pnpm = "10.0.0"
-```

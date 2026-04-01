@@ -4,7 +4,9 @@ This document describes Driftr's internal design for contributors and anyone cur
 
 ## Overview
 
-Driftr is a shim-based toolchain manager. When you type `node`, a lightweight shim intercepts the call, resolves the correct Node.js version, and replaces itself with the real binary using `syscall.Exec`. The entire resolution happens in single-digit milliseconds.
+Driftr is a shim-based toolchain manager. When you type `node`, `pnpm`, or `yarn`, a lightweight shim intercepts the call, resolves the correct version, and replaces itself with the real binary using `syscall.Exec`. The entire resolution happens in single-digit milliseconds.
+
+Standalone tools (node, pnpm) are exec'd directly. Tools that need Node.js to run (yarn) are exec'd as `node <tool-script>`.
 
 ```mermaid
 flowchart TD
@@ -37,26 +39,33 @@ internal/
     project.go              .driftr.toml read/write + directory walk
     packagejson.go          package.json driftr key read/write
 
-  installer/                Node.js installation pipeline
-    node.go                 orchestrates install: resolve → download → verify → extract
-    download.go             HTTP download with caching
+  installer/                tool installation pipelines
+    node.go                 Node.js: resolve → download → verify SHA256 → extract
+    pnpm.go                 pnpm: resolve → download standalone binary from GitHub
+    yarn.go                 yarn: resolve → download from npm registry → verify SRI → extract
+    registry.go             npm registry client: version resolution, tarball download, SRI verification
+    registry_extract.go     tarball extraction for npm registry packages
+    download.go             HTTP download with caching and progress reporting
     extract.go              tar.gz extraction with path sanitization
     checksum.go             SHA256 verification against SHASUMS256.txt
 
   resolver/                 version resolution engine
-    resolver.go             resolution chain: explicit → project → package.json → global
+    resolver.go             generic resolution: ResolveTool(), ResolveBinaryFull() with dual resolution
 
   shim/                     shim script generation
-    shim.go                 creates shell scripts in ~/.driftr/bin/
+    shim.go                 creates shell scripts in ~/.driftr/bin/ (node, npm, npx, pnpm, pnpx, yarn)
 
   process/                  process execution
     exec.go                 syscall.Exec (replace) and exec.Command (child)
 
   platform/                 OS and architecture abstraction
-    platform.go             paths, directories, OS/arch detection
+    platform.go             paths, directories, OS/arch detection, toolBinaryMap
 
   version/                  version string parsing
-    version.go              semver parsing with partial version support
+    version.go              semver parsing with partial version and tool@ prefix support
+
+  updater/                  self-update mechanism
+    updater.go              checks GitHub releases, downloads and replaces binary
 ```
 
 ## Key Design Decisions
@@ -70,13 +79,18 @@ Shims are simple shell scripts:
 exec "/usr/local/bin/driftr" shim node "$@"
 ```
 
-The `exec` replaces the shell process with `driftr`, and then `driftr` uses `syscall.Exec` to replace itself with the real `node` binary. This double-exec means:
+Shims exist for `node`, `npm`, `npx`, `pnpm`, `pnpx`, and `yarn`. The `exec` replaces the shell process with `driftr`, and then `driftr` uses `syscall.Exec` to replace itself with the real binary. This double-exec means:
 
 - No child process management
 - Exit codes pass through natively
 - stdin/stdout/stderr are preserved
 - Signal handling is handled by the OS
 - Near-zero latency overhead
+
+There are two execution modes:
+
+1. **Direct exec** (node, pnpm): `syscall.Exec(tool-binary, args, env)`
+2. **Node-wrapped exec** (yarn): `syscall.Exec(node, [yarn.js, args...], env)` — because yarn is a JS script that needs Node.js to run. The Node version is co-resolved from the same config.
 
 ### `DisableFlagParsing` on Shim Command
 
@@ -93,20 +107,22 @@ The resolver follows a strict priority order:
 
 In each directory, `.driftr.toml` is checked before `package.json`. The closest config to the working directory wins, regardless of format.
 
-There is no system fallback by default. If no version is configured, Driftr returns an actionable error message. This is intentional: implicit fallback to a system Node would undermine the determinism guarantee.
+Each tool resolves independently: `npm`/`npx` resolve via node's version (bundled), `pnpm`/`pnpx` via pnpm's version, and `yarn` via yarn's version. There is no system fallback — if no version is configured, Driftr returns an actionable error.
 
 ### Partial Version Resolution
 
-When a user types `driftr install node@22`, Driftr queries the Node.js release index at `https://nodejs.org/dist/index.json` and picks the latest release matching major version 22. The index is sorted newest-first, so the first match is always the latest.
+Partial versions (e.g. `node@22`, `pnpm@9`) are resolved to the latest matching release:
+
+- **Node.js**: queries `nodejs.org/dist/index.json`
+- **pnpm/yarn**: queries the npm registry at `registry.npmjs.org/<package>`
 
 ### Checksum Verification
 
-Every download is verified:
-
-1. Fetch `SHASUMS256.txt` from `nodejs.org/dist/v<version>/`
-2. Find the line matching the archive filename
-3. Compute SHA256 of the local file
-4. Compare -- fail with an actionable error if they differ
+| Tool    | Method                                            |
+|---------|---------------------------------------------------|
+| Node.js | SHA256 against `SHASUMS256.txt` from nodejs.org   |
+| pnpm    | No verification (standalone binary from GitHub)   |
+| yarn    | SHA-512 SRI integrity from npm registry metadata  |
 
 On failure, the cached archive is deleted so the next attempt re-downloads.
 
