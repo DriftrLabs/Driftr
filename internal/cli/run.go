@@ -3,9 +3,10 @@ package cli
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/DriftrLabs/driftr/internal/process"
 	"github.com/DriftrLabs/driftr/internal/resolver"
-	"github.com/spf13/cobra"
 )
 
 func newRunCmd() *cobra.Command {

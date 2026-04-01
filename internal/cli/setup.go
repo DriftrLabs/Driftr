@@ -3,9 +3,10 @@ package cli
 import (
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/shim"
-	"github.com/spf13/cobra"
 )
 
 func newSetupCmd() *cobra.Command {

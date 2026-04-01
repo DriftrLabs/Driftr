@@ -108,7 +108,7 @@ func Download(version string, verbose bool, cleanup *installCleanup) (string, er
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return "", fmt.Errorf("Node.js version %s not found at %s", version, url)
+		return "", fmt.Errorf("node.js version %s not found at %s", version, url)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download failed with status %d", resp.StatusCode)

@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/DriftrLabs/driftr/internal/config"
 	"github.com/DriftrLabs/driftr/internal/resolver"
-	"github.com/spf13/cobra"
 )
 
 // pinFormat represents the config storage format.
@@ -106,7 +107,7 @@ func promptPinFormat(cmd *cobra.Command) (pinFormat, error) {
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
 	if err != nil {
-		return formatTOML, nil
+		return formatTOML, err
 	}
 
 	switch strings.TrimSpace(input) {
