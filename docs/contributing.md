@@ -44,13 +44,14 @@ go test ./...
 cmd/driftr/          entry point
 internal/
   cli/               CLI commands (cobra)
-  config/            TOML config management
-  installer/         download, checksum, extract
-  resolver/          version resolution chain
-  shim/              shim script generation
+  config/            TOML + JSON config management
+  installer/         tool installers (node, pnpm, yarn) + npm registry client
+  resolver/          generic version resolution chain
+  shim/              shim script generation (node, npm, npx, pnpm, pnpx, yarn)
   process/           process execution (syscall.Exec)
-  platform/          OS/architecture abstraction
-  version/           semver parsing
+  platform/          OS/architecture abstraction, tool binary map
+  version/           semver parsing with tool@ prefix support
+  updater/           self-update mechanism
 docs/                documentation
 test.sh              integration test script
 Dockerfile           production image
@@ -181,24 +182,23 @@ Group tests under numbered section headers to keep them organized.
 
 ### Good First Issues
 
-- Add shell completion scripts (bash, zsh, fish)
 - Improve error messages with suggestions
-- Add `driftr uninstall node@<version>` command
+- Add `driftr uninstall <tool@version>` command
 - Add color output for `driftr list`
+- Add `driftr list --all` to show versions for all tools at once
 
 ### Medium Complexity
 
 - `.nvmrc` and `.node-version` file support in the resolver
 - `driftr doctor` command for environment health checks
-- Download progress bar
-- `driftr self-update` mechanism
+- pnpm and yarn pinning in `package.json` format (currently `.driftr.toml` only)
+- Checksum verification for pnpm standalone binaries
 
 ### Larger Features
 
-- pnpm and yarn version management
-- Package manager pinning in `.driftr.toml`
 - Windows support (`.cmd` shims, `.zip` extraction)
 - Mirror configuration for custom download sources
+- yarn berry (3+/4+) support
 
 ## Reporting Bugs
 

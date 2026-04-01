@@ -4,7 +4,7 @@ All commands support the `-v` / `--verbose` flag for detailed output.
 
 ## driftr install
 
-Download and install a Node.js version.
+Download and install a tool version.
 
 ```bash
 # Install latest Node.js 22.x
@@ -13,48 +13,60 @@ driftr install node@22
 # Install a specific version
 driftr install node@22.14.0
 
+# Install pnpm and yarn
+driftr install pnpm@9
+driftr install yarn@1
+
+# Install the latest version of a tool
+driftr install node@latest
+
 # Verbose output (shows download URL, checksum verification)
 driftr install node@22 -v
 ```
 
-**What happens:**
-1. If a partial version is given (e.g. `22`), Driftr resolves it to the latest matching release by querying the Node.js release index
-2. Downloads the archive from `nodejs.org`
-3. Verifies the SHA256 checksum against the official `SHASUMS256.txt`
-4. Extracts the archive to `~/.driftr/tools/node/<version>/`
+**Install pipelines by tool:**
+
+| Tool    | Source                                 | Verification                  |
+|---------|----------------------------------------|-------------------------------|
+| Node.js | nodejs.org archives                    | SHA256 against SHASUMS256.txt |
+| pnpm    | Standalone binary from GitHub releases | --                            |
+| yarn    | npm registry tarball                   | SHA-512 SRI integrity         |
 
 **Notes:**
 - Reinstalling an already-installed version is a no-op
-- Downloaded archives are cached in `~/.driftr/cache/`
+- Downloaded archives and binaries are cached in `~/.driftr/cache/`
 - If checksum verification fails, the cached archive is deleted automatically
 - If extraction fails, the partial installation is cleaned up
 
 ## driftr default
 
-Set the global default Node.js version.
+Set the global default version for a tool.
 
 ```bash
 driftr default node@22.14.0
+driftr default pnpm@9.15.0
+driftr default yarn@1.22.22
 ```
 
-The global default is used whenever you run `node` outside a project with a pinned version.
+The global default is used whenever you run a tool outside a project with a pinned version.
 
 **Requirements:**
 - The version must already be installed
 
 ## driftr pin
 
-Pin a Node.js version to the current project.
+Pin a tool version to the current project.
 
 ```bash
 cd my-project
 driftr pin node@22.14.0
+driftr pin pnpm@9.15.0
 ```
 
 On first use, Driftr prompts you to choose a storage format:
 
 ```
-No existing project config found. How should the Node.js version be stored?
+No existing project config found. How should the version be stored?
   1) .driftr.toml (recommended)
   2) package.json (driftr key)
 Choose [1/2]:
@@ -65,6 +77,7 @@ Choosing `.driftr.toml` creates:
 ```toml
 [tools]
 node = "22.14.0"
+pnpm = "9.15.0"
 ```
 
 Choosing `package.json` adds a `driftr` key to your existing `package.json`:
@@ -92,6 +105,7 @@ This writes the version in the other format and removes the old config.
 **Requirements:**
 - The version must already be installed
 - `package.json` format requires an existing `package.json` file (run `npm init` first)
+- `package.json` format currently only supports `node`. For pnpm and yarn pinning, use `.driftr.toml`
 
 **Behavior:**
 - Anyone who clones the project and has Driftr set up will automatically use the pinned version
@@ -101,16 +115,18 @@ This writes the version in the other format and removes the old config.
 
 ## driftr list
 
-List all installed Node.js versions.
+List installed versions for a tool. Defaults to node.
 
 ```bash
-driftr list
+driftr list          # list node versions
+driftr list pnpm     # list pnpm versions
+driftr list yarn     # list yarn versions
 ```
 
 Output example:
 
 ```
-Installed Node.js versions:
+Installed node versions:
     20.11.0
   * 22.14.0
     24.0.0
@@ -126,6 +142,8 @@ Show which binary Driftr would execute, and why.
 
 ```bash
 driftr which node
+driftr which pnpm
+driftr which yarn
 ```
 
 Output example:
@@ -147,7 +165,7 @@ driftr which node -v
 This shows each step of the resolution chain:
 
 ```
-  [resolve] Starting Node.js version resolution
+  [resolve] Starting node version resolution
   [resolve] Step 1: No explicit override
   [resolve] Step 2: Searching for project config from /home/user/my-project
   [resolve]   Checking: /home/user/my-project/.driftr.toml
@@ -185,8 +203,8 @@ driftr setup
 ```
 
 **What it creates:**
-- `~/.driftr/bin/` with shims for `node`, `npm`, `npx`
-- `~/.driftr/tools/node/` for installed versions
+- `~/.driftr/bin/` with shims for `node`, `npm`, `npx`, `pnpm`, `pnpx`, `yarn`
+- `~/.driftr/tools/` for installed tool versions
 - `~/.driftr/config/` for global settings
 - `~/.driftr/cache/` for downloads
 
@@ -194,7 +212,7 @@ Run this once after installing Driftr, and again after upgrading to regenerate s
 
 ## Resolution Order
 
-When you run `node` (or `npm`/`npx`), Driftr resolves the version in this order:
+When you run a tool (`node`, `npm`, `npx`, `pnpm`, `pnpx`, or `yarn`), Driftr resolves the version in this order:
 
 | Priority | Source | When |
 |----------|--------|------|
@@ -203,11 +221,13 @@ When you run `node` (or `npm`/`npx`), Driftr resolves the version in this order:
 | 3 | `package.json` driftr key | Found in current or parent directory |
 | 4 | Global default | Set via `driftr default` |
 
-If no version is configured at any level, Driftr prints an actionable error:
+If no version is configured at any level, Driftr prints an actionable error.
 
-```
-no Node.js version configured. Run `driftr install node@<version>` and `driftr default node@<version>`
-```
+**Tool resolution:**
+
+- `npm` and `npx` resolve via the **node** version (they are bundled with Node.js)
+- `pnpm` and `pnpx` resolve via the **pnpm** version (pnpx is a symlink to pnpm)
+- `yarn` resolves via the **yarn** version, and also co-resolves **node** because yarn is a JS script that needs `node` to execute
 
 ## Typical Workflow
 
@@ -217,19 +237,22 @@ driftr setup
 echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 
-# Install versions you need
+# Install your toolchain
 driftr install node@22
-driftr install node@24
+driftr install pnpm@9
+driftr install yarn@1
 
-# Set a global fallback
-driftr default node@24.0.0
+# Set global defaults
+driftr default node@22.14.0
+driftr default pnpm@9.15.0
 
 # Pin projects
-cd project-a && driftr pin node@22.14.0
+cd project-a && driftr pin node@22.14.0 && driftr pin pnpm@9.15.0
 cd project-b && driftr pin node@24.0.0
 
-# Just use node normally -- Driftr handles the rest
+# Everything just works -- Driftr handles the rest
 cd project-a && node -v   # v22.14.0
+cd project-a && pnpm -v   # 9.15.0
 cd project-b && node -v   # v24.0.0
-cd ~         && node -v   # v24.0.0 (global default)
+cd ~         && node -v   # v22.14.0 (global default)
 ```
