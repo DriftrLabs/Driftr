@@ -166,6 +166,12 @@ main() {
     log ""
     log "Restart your shell or run:"
     log "  export PATH=\"${INSTALL_DIR}:\$PATH\""
+    log ""
+    log "To enable shell completions:"
+    log "  # zsh"
+    log "  echo 'eval \"\$(driftr completion zsh)\"' >> ~/.zshrc"
+    log "  # bash"
+    log "  echo 'eval \"\$(driftr completion bash)\"' >> ~/.bashrc"
 }
 
 configure_path() {

@@ -63,6 +63,19 @@ node -v  # resolves automatically
 
 All commands support `-v` / `--verbose` for detailed output including resolver tracing and checksum details.
 
+## Shell Completions
+
+```bash
+# zsh
+echo 'eval "$(driftr completion zsh)"' >> ~/.zshrc
+
+# bash
+echo 'eval "$(driftr completion bash)"' >> ~/.bashrc
+
+# fish
+driftr completion fish | source
+```
+
 ## How It Works
 
 ```mermaid
