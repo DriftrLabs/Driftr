@@ -16,34 +16,23 @@ type ProjectConfig struct {
 }
 
 // ToolsConfig holds pinned tool versions for a project.
-// Supports both the legacy `node = "..."` field and a generic map.
-type ToolsConfig struct {
-	Node    string            `toml:"node,omitempty"` // backwards compat
-	Entries map[string]string `toml:"-"`              // populated after load
-}
+// Serialized as a flat TOML map: [tools] node = "22.14.0", pnpm = "9.15.0"
+type ToolsConfig map[string]string
 
 // GetTool returns the pinned version for a tool.
-func (tc *ToolsConfig) GetTool(tool string) string {
-	if tc.Entries != nil {
-		if v, ok := tc.Entries[tool]; ok {
-			return v
-		}
+func (tc ToolsConfig) GetTool(tool string) string {
+	if tc == nil {
+		return ""
 	}
-	if tool == "node" {
-		return tc.Node
-	}
-	return ""
+	return tc[tool]
 }
 
 // SetTool sets the pinned version for a tool.
 func (tc *ToolsConfig) SetTool(tool, version string) {
-	if tc.Entries == nil {
-		tc.Entries = make(map[string]string)
+	if *tc == nil {
+		*tc = make(ToolsConfig)
 	}
-	tc.Entries[tool] = version
-	if tool == "node" {
-		tc.Node = version
-	}
+	(*tc)[tool] = version
 }
 
 // LoadProject reads the project config from the given directory.

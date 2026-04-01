@@ -3,10 +3,12 @@ package installer
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/version"
 )
@@ -68,7 +70,7 @@ func InstallPnpm(versionStr string, verbose bool) (string, error) {
 	}
 
 	destPath := filepath.Join(binDir, "pnpm")
-	if err := copyFile(archivePath, destPath); err != nil {
+	if err := ioutil.CopyFile(archivePath, destPath); err != nil {
 		os.RemoveAll(versionDir)
 		return "", fmt.Errorf("failed to install pnpm binary: %w", err)
 	}
@@ -82,7 +84,7 @@ func InstallPnpm(versionStr string, verbose bool) (string, error) {
 	os.Remove(pnpxPath) // remove if exists
 	if err := os.Symlink("pnpm", pnpxPath); err != nil {
 		// Fallback: copy the binary if symlink fails.
-		if err := copyFile(destPath, pnpxPath); err != nil {
+		if err := ioutil.CopyFile(destPath, pnpxPath); err != nil {
 			return "", fmt.Errorf("failed to create pnpx: %w", err)
 		}
 	}
@@ -134,10 +136,10 @@ func downloadPnpmBinary(ver string, verbose bool) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return "", fmt.Errorf("pnpm %s standalone binary not found for %s/%s", ver, runtime.GOOS, runtime.GOARCH)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download failed with status %d", resp.StatusCode)
 	}
 
@@ -147,10 +149,10 @@ func downloadPnpmBinary(ver string, verbose bool) (string, error) {
 	}
 	tmpPath := tmpFile.Name()
 
-	if isTerminal(os.Stderr) {
-		pw := &progressWriter{dest: tmpFile, total: resp.ContentLength}
+	if ioutil.IsTerminal(os.Stderr) {
+		pw := &ioutil.ProgressWriter{Dest: tmpFile, Total: resp.ContentLength}
 		_, err = io.Copy(pw, resp.Body)
-		pw.finish()
+		pw.Finish()
 	} else {
 		_, err = io.Copy(tmpFile, resp.Body)
 	}
@@ -166,21 +168,4 @@ func downloadPnpmBinary(ver string, verbose bool) (string, error) {
 	}
 
 	return destPath, nil
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	return err
 }

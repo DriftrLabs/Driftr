@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -135,7 +134,7 @@ func Install(versionStr string, verbose bool) (string, error) {
 		// Remove corrupted cached archive so next attempt re-downloads.
 		os.Remove(archivePath)
 		cleanup.run()
-		return "", fmt.Errorf("checksum verification failed: %w", err)
+		return "", err
 	}
 
 	if err := Extract(archivePath, resolvedVersion, verbose); err != nil {
@@ -175,33 +174,12 @@ func resolveLatestVersion(v version.Version) (string, error) {
 
 // ListInstalledVersions returns all installed Node.js versions.
 func ListInstalledVersions() ([]string, error) {
-	return ListInstalledToolVersions("node")
+	return platform.ListToolVersions("node")
 }
 
 // ListInstalledToolVersions returns all installed versions for a given tool.
 func ListInstalledToolVersions(tool string) ([]string, error) {
-	toolsDir, err := platform.ToolsDir()
-	if err != nil {
-		return nil, err
-	}
-
-	toolDir := filepath.Join(toolsDir, tool)
-	entries, err := os.ReadDir(toolDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to read %s versions: %w", tool, err)
-	}
-
-	var versions []string
-	for _, e := range entries {
-		if e.IsDir() {
-			versions = append(versions, e.Name())
-		}
-	}
-
-	return versions, nil
+	return platform.ListToolVersions(tool)
 }
 
 func fetchNodeIndex() ([]NodeRelease, error) {

@@ -38,8 +38,8 @@ node = "22.14.0"
 	if cfg == nil {
 		t.Fatal("expected non-nil config")
 	}
-	if cfg.Tools.Node != "22.14.0" {
-		t.Errorf("Tools.Node = %q, want %q", cfg.Tools.Node, "22.14.0")
+	if got := cfg.Tools.GetTool("node"); got != "22.14.0" {
+		t.Errorf("Tools.GetTool(node) = %q, want %q", got, "22.14.0")
 	}
 }
 
@@ -57,7 +57,7 @@ func TestSaveAndLoadProject(t *testing.T) {
 	dir := t.TempDir()
 
 	cfg := &ProjectConfig{}
-	cfg.Tools.Node = "24.0.1"
+	cfg.Tools.SetTool("node", "24.0.1")
 
 	if err := SaveProject(dir, cfg); err != nil {
 		t.Fatalf("SaveProject() error: %v", err)
@@ -70,8 +70,34 @@ func TestSaveAndLoadProject(t *testing.T) {
 	if loaded == nil {
 		t.Fatal("expected non-nil config after save")
 	}
-	if loaded.Tools.Node != "24.0.1" {
-		t.Errorf("Tools.Node = %q, want %q", loaded.Tools.Node, "24.0.1")
+	if got := loaded.Tools.GetTool("node"); got != "24.0.1" {
+		t.Errorf("Tools.GetTool(node) = %q, want %q", got, "24.0.1")
+	}
+}
+
+func TestSaveAndLoadProject_MultiTool(t *testing.T) {
+	dir := t.TempDir()
+
+	cfg := &ProjectConfig{}
+	cfg.Tools.SetTool("node", "24.0.1")
+	cfg.Tools.SetTool("pnpm", "9.15.0")
+
+	if err := SaveProject(dir, cfg); err != nil {
+		t.Fatalf("SaveProject() error: %v", err)
+	}
+
+	loaded, err := LoadProject(dir)
+	if err != nil {
+		t.Fatalf("LoadProject() error: %v", err)
+	}
+	if loaded == nil {
+		t.Fatal("expected non-nil config after save")
+	}
+	if got := loaded.Tools.GetTool("node"); got != "24.0.1" {
+		t.Errorf("Tools.GetTool(node) = %q, want %q", got, "24.0.1")
+	}
+	if got := loaded.Tools.GetTool("pnpm"); got != "9.15.0" {
+		t.Errorf("Tools.GetTool(pnpm) = %q, want %q", got, "9.15.0")
 	}
 }
 
@@ -84,11 +110,10 @@ func TestLoadProject_EmptyNode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadProject() error: %v", err)
 	}
-	// File exists but node is empty — still returns the config struct.
 	if cfg == nil {
-		t.Fatal("expected non-nil config for existing file with empty node")
+		t.Fatal("expected non-nil config for existing file with empty tools")
 	}
-	if cfg.Tools.Node != "" {
-		t.Errorf("Tools.Node = %q, want empty", cfg.Tools.Node)
+	if got := cfg.Tools.GetTool("node"); got != "" {
+		t.Errorf("Tools.GetTool(node) = %q, want empty", got)
 	}
 }

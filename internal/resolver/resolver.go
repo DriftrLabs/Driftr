@@ -83,27 +83,7 @@ func resolveInstalledPartial(tool string, v version.Version) (string, string, er
 
 // ListToolVersions returns all installed version strings for a tool.
 func ListToolVersions(tool string) ([]string, error) {
-	toolsDir, err := platform.ToolsDir()
-	if err != nil {
-		return nil, err
-	}
-
-	toolDir := filepath.Join(toolsDir, tool)
-	entries, err := os.ReadDir(toolDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to read %s versions: %w", tool, err)
-	}
-
-	var versions []string
-	for _, e := range entries {
-		if e.IsDir() {
-			versions = append(versions, e.Name())
-		}
-	}
-	return versions, nil
+	return platform.ListToolVersions(tool)
 }
 
 // requireToolBinaryExists checks that the binary for the given tool and version is installed.

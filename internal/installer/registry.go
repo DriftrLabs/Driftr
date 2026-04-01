@@ -2,14 +2,17 @@ package installer
 
 import (
 	"crypto/sha512"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/version"
 )
@@ -47,10 +50,10 @@ func FetchRegistryVersion(pkg, ver string) (*registryVersion, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("%s@%s not found in npm registry", pkg, ver)
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("npm registry returned status %d for %s@%s", resp.StatusCode, pkg, ver)
 	}
 
@@ -71,7 +74,7 @@ func ResolveRegistryLatest(pkg string, v version.Version) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("npm registry returned status %d for %s", resp.StatusCode, pkg)
 	}
 
@@ -162,7 +165,7 @@ func DownloadRegistryPackage(pkg, ver string, verbose bool) (string, *registryVe
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", nil, fmt.Errorf("download failed with status %d", resp.StatusCode)
 	}
 
@@ -172,10 +175,10 @@ func DownloadRegistryPackage(pkg, ver string, verbose bool) (string, *registryVe
 	}
 	tmpPath := tmpFile.Name()
 
-	if isTerminal(os.Stderr) {
-		pw := &progressWriter{dest: tmpFile, total: resp.ContentLength}
+	if ioutil.IsTerminal(os.Stderr) {
+		pw := &ioutil.ProgressWriter{Dest: tmpFile, Total: resp.ContentLength}
 		_, err = io.Copy(pw, resp.Body)
-		pw.finish()
+		pw.Finish()
 	} else {
 		_, err = io.Copy(tmpFile, resp.Body)
 	}
@@ -216,7 +219,7 @@ func VerifyIntegrity(filePath, integrity string) error {
 	}
 
 	actual := h.Sum(nil)
-	if !equalBytes(actual, expectedHash) {
+	if subtle.ConstantTimeCompare(actual, expectedHash) != 1 {
 		return fmt.Errorf("integrity mismatch: expected sha512-%s, got sha512-%s",
 			base64.StdEncoding.EncodeToString(expectedHash),
 			base64.StdEncoding.EncodeToString(actual))
@@ -239,16 +242,4 @@ func parseSRI(sri string) (string, []byte, error) {
 	}
 
 	return algo, hashBytes, nil
-}
-
-func equalBytes(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

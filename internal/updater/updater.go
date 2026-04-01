@@ -14,6 +14,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 )
 
 const (
@@ -134,10 +136,10 @@ func downloadFile(url, dest string) error {
 	}
 	defer f.Close()
 
-	if isTerminal(os.Stderr) {
-		pw := &progressWriter{dest: f, total: resp.ContentLength}
+	if ioutil.IsTerminal(os.Stderr) {
+		pw := &ioutil.ProgressWriter{Dest: f, Total: resp.ContentLength}
 		_, err = io.Copy(pw, resp.Body)
-		pw.finish()
+		pw.Finish()
 	} else {
 		_, err = io.Copy(f, resp.Body)
 	}
@@ -230,68 +232,7 @@ func replaceBinary(newPath, oldPath string) error {
 	// On Unix this works even while the old binary is running.
 	if err := os.Rename(newPath, oldPath); err != nil {
 		// Cross-device rename fails — fall back to copy.
-		return copyFile(newPath, oldPath)
+		return ioutil.CopyFile(newPath, oldPath)
 	}
 	return nil
-}
-
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	return err
-}
-
-// isTerminal reports whether f is connected to a terminal.
-func isTerminal(f *os.File) bool {
-	fi, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
-}
-
-// progressWriter wraps an io.Writer to report download progress to stderr.
-type progressWriter struct {
-	dest      io.Writer
-	total     int64
-	written   int64
-	lastPrint time.Time
-}
-
-func (pw *progressWriter) Write(p []byte) (int, error) {
-	n, err := pw.dest.Write(p)
-	pw.written += int64(n)
-
-	if time.Since(pw.lastPrint) >= 100*time.Millisecond {
-		pw.printProgress()
-		pw.lastPrint = time.Now()
-	}
-
-	return n, err
-}
-
-func (pw *progressWriter) printProgress() {
-	downloadedMB := float64(pw.written) / (1024 * 1024)
-	if pw.total > 0 {
-		totalMB := float64(pw.total) / (1024 * 1024)
-		fmt.Fprintf(os.Stderr, "\r  Downloading: %.1f MB / %.1f MB", downloadedMB, totalMB)
-	} else {
-		fmt.Fprintf(os.Stderr, "\r  Downloading: %.1f MB", downloadedMB)
-	}
-}
-
-func (pw *progressWriter) finish() {
-	pw.printProgress()
-	fmt.Fprint(os.Stderr, "\n")
 }

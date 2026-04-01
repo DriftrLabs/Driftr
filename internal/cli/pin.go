@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/config"
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/resolver"
 )
 
@@ -95,7 +96,7 @@ func detectPinFormat(dir string) pinFormat {
 func promptPinFormat(cmd *cobra.Command) (pinFormat, error) {
 	// Non-interactive: default to .driftr.toml.
 	// Check for a real terminal (not just a char device like /dev/null).
-	if !isStdinTerminal() {
+	if !ioutil.IsTerminal(os.Stdin) {
 		return formatTOML, nil
 	}
 

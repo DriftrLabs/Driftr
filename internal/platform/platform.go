@@ -175,6 +175,31 @@ func ToolBinary(tool, version string) (string, error) {
 	return filepath.Join(dir, "bin", entry.Binary), nil
 }
 
+// ListToolVersions returns all installed version strings for a tool.
+func ListToolVersions(tool string) ([]string, error) {
+	toolsDir, err := ToolsDir()
+	if err != nil {
+		return nil, err
+	}
+
+	toolDir := filepath.Join(toolsDir, tool)
+	entries, err := os.ReadDir(toolDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read %s versions: %w", tool, err)
+	}
+
+	var versions []string
+	for _, e := range entries {
+		if e.IsDir() {
+			versions = append(versions, e.Name())
+		}
+	}
+	return versions, nil
+}
+
 // ArchiveExt returns the archive extension for the current platform.
 func ArchiveExt() string {
 	return "tar.gz"

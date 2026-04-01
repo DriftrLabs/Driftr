@@ -8,52 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
-
-// isTerminal reports whether f is connected to a terminal.
-func isTerminal(f *os.File) bool {
-	fi, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
-}
-
-// progressWriter wraps an io.Writer to report download progress to stderr.
-type progressWriter struct {
-	dest      io.Writer
-	total     int64 // from Content-Length; -1 if unknown
-	written   int64
-	lastPrint time.Time
-}
-
-func (pw *progressWriter) Write(p []byte) (int, error) {
-	n, err := pw.dest.Write(p)
-	pw.written += int64(n)
-
-	if time.Since(pw.lastPrint) >= 100*time.Millisecond {
-		pw.printProgress()
-		pw.lastPrint = time.Now()
-	}
-
-	return n, err
-}
-
-func (pw *progressWriter) printProgress() {
-	downloadedMB := float64(pw.written) / (1024 * 1024)
-	if pw.total > 0 {
-		totalMB := float64(pw.total) / (1024 * 1024)
-		fmt.Fprintf(os.Stderr, "\r  Downloading: %.1f MB / %.1f MB", downloadedMB, totalMB)
-	} else {
-		fmt.Fprintf(os.Stderr, "\r  Downloading: %.1f MB", downloadedMB)
-	}
-}
-
-func (pw *progressWriter) finish() {
-	pw.printProgress()
-	fmt.Fprint(os.Stderr, "\n")
-}
 
 const nodeDistBaseURL = "https://nodejs.org/dist"
 
@@ -125,10 +82,10 @@ func Download(version string, verbose bool, cleanup *installCleanup) (string, er
 		cleanup.setTmpFile(tmpPath)
 	}
 
-	if isTerminal(os.Stderr) {
-		pw := &progressWriter{dest: tmpFile, total: resp.ContentLength}
+	if ioutil.IsTerminal(os.Stderr) {
+		pw := &ioutil.ProgressWriter{Dest: tmpFile, Total: resp.ContentLength}
 		_, err = io.Copy(pw, resp.Body)
-		pw.finish()
+		pw.Finish()
 	} else {
 		_, err = io.Copy(tmpFile, resp.Body)
 	}
