@@ -9,20 +9,24 @@
 </p>
 
 <p align="center">
-  A cross-platform JavaScript toolchain manager focused on reproducible developer environments.
+  A lightweight JavaScript toolchain manager built for speed and simplicity.<br>
+  The spiritual successor to <a href="https://github.com/volta-cli/volta/issues/2080">Volta</a>, made for developers by developers.
 </p>
 
 ---
 
-## What is Driftr?
+## Why Driftr?
 
-Driftr manages Node.js versions so you don't have to think about them. Pin a version to your project, set a global default, and move between repositories without manual switching. Driftr resolves the right runtime instantly through lightweight shims.
+[Volta is no longer maintained.](https://github.com/volta-cli/volta/issues/2080) If you liked Volta's "pin and forget" model -- where `node` and `npm` just work without manual switching -- Driftr carries that torch forward.
+
+Driftr is a new project. It doesn't have Volta's years of polish or fnm's community size. But it has a clean foundation, an honest design, and an active maintainer who actually uses it. If you're looking for something simple that does the job, give it a try. If it's missing something you need, [open an issue](https://github.com/DriftrLabs/Driftr/issues) -- we're listening.
 
 - **Shim-based** -- `node`, `npm`, and `npx` just work, resolved per-project or globally
 - **Fast** -- near-zero overhead via `syscall.Exec` process replacement
+- **Minimal** -- 2 external dependencies (cobra + toml), everything else is Go stdlib
 - **Deterministic** -- explicit resolution chain: project config > `package.json` > global default
 - **Secure** -- SHA256 checksum verification on every download
-- **Simple** -- six commands cover the entire workflow
+- **Simple** -- a handful of commands cover the entire workflow
 
 ## Install
 
@@ -113,6 +117,24 @@ The shim in `~/.driftr/bin/node` intercepts calls, the resolver determines the c
     config.toml     global default settings
   cache/            downloaded archives
 ```
+
+## How Driftr Compares
+
+| | **Driftr** | **nvm** | **Volta** | **fnm** | **mise** |
+|---|---|---|---|---|---|
+| Language | Go | Shell | Rust | Rust | Rust |
+| Mechanism | Shims | Shell function | Shims | PATH manipulation | PATH manipulation |
+| Shell startup cost | ~1ms | 200-500ms | ~1ms | ~1ms | ~5ms |
+| External dependencies | **2** | 0 (shell) | ~36 crates | 24 crates | 113 crates |
+| macOS / Linux | Yes | Yes | Yes | Yes | Yes |
+| Windows | No | No | Yes (rough) | Yes | Very basic |
+| Manages npm/pnpm/yarn | Planned | No | Partial | No | Yes |
+| Maintained | Yes | Yes | **No** | Yes | Yes |
+| Self-update | `driftr update` | `nvm` script | No | No | `mise self-update` |
+
+**When to choose Driftr**: You want a fast, minimal, shim-based Node.js manager with a Volta-like experience -- pin versions to projects, and `node` just works. You value simplicity and a small dependency footprint.
+
+**When to choose something else**: If you need Windows support, fnm is your best bet. If you want one tool for Node + Python + Ruby + everything else, mise is the polyglot option. If nvm already works for you and startup time doesn't bother you, there's no reason to switch.
 
 ## Requirements
 
