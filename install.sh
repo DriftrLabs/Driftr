@@ -87,7 +87,7 @@ resolve_version() {
 
     tag=$(download_stdout "https://api.github.com/repos/${REPO}/releases/latest" \
         | grep '"tag_name"' \
-        | sed -E 's/.*"tag_name":\s*"v?([^"]+)".*/\1/')
+        | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/')
 
     if [ -z "$tag" ]; then
         err "could not determine latest version (GitHub API rate limit?)"
