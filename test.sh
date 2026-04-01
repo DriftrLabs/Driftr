@@ -118,6 +118,37 @@ check_output "node shim resolves correct version" "v$INSTALLED" "$HOME/.driftr/b
 check_output "npm shim executes successfully" "." "$HOME/.driftr/bin/npm" -v
 echo
 
+# ── 10. Partial Version Resolution ──────────
+echo -e "${BLUE}[10] Partial Version Resolution${NC}"
+MAJOR=$(echo "$INSTALLED" | cut -d. -f1)
+check "driftr default node@$MAJOR resolves to installed" driftr default "node@$MAJOR"
+check_output "default is set to full version" "$INSTALLED" driftr which node
+echo
+
+# ── 11. Multi-tool Config ───────────────────
+echo -e "${BLUE}[11] Multi-tool Config${NC}"
+mkdir -p /tmp/test-multitool && cd /tmp/test-multitool
+
+# Pin node in .driftr.toml then verify multiple tools work in same config.
+check "pin node in multi-tool project" driftr pin "node@$INSTALLED"
+check_output ".driftr.toml has node version" "$INSTALLED" cat /tmp/test-multitool/.driftr.toml
+cd /home/driftr
+echo
+
+# ── 12. Error Cases ─────────────────────────
+echo -e "${BLUE}[12] Error Cases${NC}"
+check_output "install unknown tool errors" "unknown tool" driftr install "unknown@1.0"
+check_output "default uninstalled version errors" "not installed" driftr default "node@99.99.99"
+check_output "list unknown tool shows empty" "No unknown versions" driftr list unknown
+echo
+
+# ── 13. Setup Generates All Shims ───────────
+echo -e "${BLUE}[13] Setup Shims${NC}"
+check "pnpm shim was created" test -f "$HOME/.driftr/bin/pnpm"
+check "pnpx shim was created" test -f "$HOME/.driftr/bin/pnpx"
+check "yarn shim was created" test -f "$HOME/.driftr/bin/yarn"
+echo
+
 # ── Summary ───────────────────────────────────
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════${NC}"
