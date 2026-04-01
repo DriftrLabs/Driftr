@@ -81,16 +81,16 @@ func Install(versionStr string, verbose bool) (string, error) {
 		return "", fmt.Errorf("invalid version: %w", err)
 	}
 
-	// If partial version (e.g. "24"), resolve to latest matching release.
+	// If partial version (e.g. "24", "24.14") or "latest", resolve to latest matching release.
 	resolvedVersion := v.String()
-	if v.IsPartial() {
+	if v.Latest || v.IsPartial() {
 		resolved, err := resolveLatestVersion(v)
 		if err != nil {
 			return "", err
 		}
 		resolvedVersion = resolved
 		if verbose {
-			fmt.Printf("  Resolved node@%d to %s\n", v.Major, resolvedVersion)
+			fmt.Printf("  Resolved %s to %s\n", versionStr, resolvedVersion)
 		}
 	}
 
@@ -149,6 +149,7 @@ func Install(versionStr string, verbose bool) (string, error) {
 }
 
 // resolveLatestVersion finds the latest Node.js release matching a partial version.
+// The release index is sorted newest-first, so the first match is the latest.
 func resolveLatestVersion(v version.Version) (string, error) {
 	releases, err := fetchNodeIndex()
 	if err != nil {
@@ -160,12 +161,15 @@ func resolveLatestVersion(v version.Version) (string, error) {
 		if err != nil {
 			continue
 		}
-		if rv.Major == v.Major {
+		if v.Matches(rv) {
 			return rv.String(), nil
 		}
 	}
 
-	return "", fmt.Errorf("no Node.js release found for major version %d", v.Major)
+	if v.Latest {
+		return "", fmt.Errorf("no Node.js releases found")
+	}
+	return "", fmt.Errorf("no Node.js release found matching %s", v.Raw)
 }
 
 // ListInstalledVersions returns all installed Node.js versions.
