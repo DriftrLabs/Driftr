@@ -147,6 +147,9 @@ var toolBinaryMap = map[string]struct {
 	"node": {parent: "node", binary: "node"},
 	"npm":  {parent: "node", binary: "npm"},
 	"npx":  {parent: "node", binary: "npx"},
+	"pnpm": {parent: "pnpm", binary: "pnpm"},
+	"pnpx": {parent: "pnpm", binary: "pnpx"},
+	"yarn": {parent: "yarn", binary: "yarn"},
 }
 
 // ToolBinary returns the binary path for a given tool and version.
