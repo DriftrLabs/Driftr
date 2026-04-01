@@ -95,7 +95,7 @@ func detectPinFormat(dir string) pinFormat {
 func promptPinFormat(cmd *cobra.Command) (pinFormat, error) {
 	// Non-interactive: default to .driftr.toml.
 	stat, err := os.Stdin.Stat()
-	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 {
+	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 { //nolint:nilerr // intentional: default to TOML when stdin is unavailable
 		return formatTOML, nil
 	}
 
