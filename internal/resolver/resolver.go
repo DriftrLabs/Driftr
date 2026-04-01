@@ -15,17 +15,22 @@ import (
 // For partial versions (e.g. "24", "24.14") and "latest", it finds the best matching
 // installed version. Returns the normalized version string and binary path, or an actionable error.
 func RequireInstalled(versionSpec string) (string, string, error) {
+	return RequireToolInstalled("node", versionSpec)
+}
+
+// RequireToolInstalled verifies a tool version is installed, with partial version resolution.
+func RequireToolInstalled(tool, versionSpec string) (string, string, error) {
 	v, err := version.Parse(versionSpec)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid version: %w", err)
 	}
 
 	if v.Latest || v.IsPartial() {
-		return resolveInstalledPartial(v)
+		return resolveInstalledPartial(tool, v)
 	}
 
 	versionStr := v.String()
-	binPath, err := requireBinaryExists(versionStr, "")
+	binPath, err := requireToolBinaryExists(tool, versionStr, "")
 	if err != nil {
 		return "", "", err
 	}
@@ -33,8 +38,8 @@ func RequireInstalled(versionSpec string) (string, string, error) {
 }
 
 // resolveInstalledPartial finds the latest installed version matching a partial spec.
-func resolveInstalledPartial(v version.Version) (string, string, error) {
-	installed, err := listInstalledVersions()
+func resolveInstalledPartial(tool string, v version.Version) (string, string, error) {
+	installed, err := ListToolVersions(tool)
 	if err != nil {
 		return "", "", err
 	}
@@ -52,9 +57,9 @@ func resolveInstalledPartial(v version.Version) (string, string, error) {
 
 	if len(matches) == 0 {
 		if v.Latest {
-			return "", "", fmt.Errorf("no Node.js versions installed. Run `driftr install node@<version>`")
+			return "", "", fmt.Errorf("no %s versions installed. Run `driftr install %s@<version>`", tool, tool)
 		}
-		return "", "", fmt.Errorf("no installed Node.js version matches %s. Run `driftr install node@%s`", v.Raw, v.Raw)
+		return "", "", fmt.Errorf("no installed %s version matches %s. Run `driftr install %s@%s`", tool, v.Raw, tool, v.Raw)
 	}
 
 	// Sort descending to pick the latest.
@@ -69,27 +74,27 @@ func resolveInstalledPartial(v version.Version) (string, string, error) {
 	})
 
 	best := matches[0].String()
-	binPath, err := requireBinaryExists(best, "")
+	binPath, err := requireToolBinaryExists(tool, best, "")
 	if err != nil {
 		return "", "", err
 	}
 	return best, binPath, nil
 }
 
-// listInstalledVersions returns all installed Node.js version strings.
-func listInstalledVersions() ([]string, error) {
+// ListToolVersions returns all installed version strings for a tool.
+func ListToolVersions(tool string) ([]string, error) {
 	toolsDir, err := platform.ToolsDir()
 	if err != nil {
 		return nil, err
 	}
 
-	nodeDir := toolsDir + "/node"
-	entries, err := os.ReadDir(nodeDir)
+	toolDir := filepath.Join(toolsDir, tool)
+	entries, err := os.ReadDir(toolDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to read node versions: %w", err)
+		return nil, fmt.Errorf("failed to read %s versions: %w", tool, err)
 	}
 
 	var versions []string
@@ -101,18 +106,17 @@ func listInstalledVersions() ([]string, error) {
 	return versions, nil
 }
 
-// requireBinaryExists checks that the node binary for the given version is installed.
-// The context string (e.g. "pinned in /path") is included in the error message if non-empty.
-func requireBinaryExists(ver, context string) (string, error) {
-	binPath, err := platform.NodeBinary(ver)
+// requireToolBinaryExists checks that the binary for the given tool and version is installed.
+func requireToolBinaryExists(tool, ver, context string) (string, error) {
+	binPath, err := platform.ToolBinary(tool, ver)
 	if err != nil {
 		return "", err
 	}
 	if _, err := os.Stat(binPath); os.IsNotExist(err) {
 		if context != "" {
-			return "", fmt.Errorf("Node %s (%s) is not installed. Run `driftr install node@%s`", ver, context, ver)
+			return "", fmt.Errorf("%s %s (%s) is not installed. Run `driftr install %s@%s`", tool, ver, context, tool, ver)
 		}
-		return "", fmt.Errorf("Node %s is not installed. Run `driftr install node@%s`", ver, ver)
+		return "", fmt.Errorf("%s %s is not installed. Run `driftr install %s@%s`", tool, ver, tool, ver)
 	}
 	return binPath, nil
 }
@@ -123,7 +127,7 @@ type Source int
 const (
 	SourceExplicit    Source = iota
 	SourceProject            // .driftr.toml
-	SourcePackageJSON        // package.json driftr.node
+	SourcePackageJSON        // package.json driftr key
 	SourceGlobal
 )
 
@@ -152,22 +156,27 @@ type Resolution struct {
 }
 
 // ResolveNode determines which Node.js version to use.
-// Resolution order: explicit > project config > global default.
 func ResolveNode(explicit string) (*Resolution, error) {
-	return ResolveNodeVerbose(explicit, false)
+	return ResolveTool("node", explicit, false)
 }
 
 // ResolveNodeVerbose determines which Node.js version to use, with optional tracing.
 func ResolveNodeVerbose(explicit string, verbose bool) (*Resolution, error) {
+	return ResolveTool("node", explicit, verbose)
+}
+
+// ResolveTool determines which version of a tool to use.
+// Resolution order: explicit > project config > global default.
+func ResolveTool(tool, explicit string, verbose bool) (*Resolution, error) {
 	if verbose {
-		fmt.Println("  [resolve] Starting Node.js version resolution")
+		fmt.Printf("  [resolve] Starting %s version resolution\n", tool)
 	}
 
 	if explicit != "" {
 		if verbose {
 			fmt.Printf("  [resolve] Step 1: Explicit override provided: %s\n", explicit)
 		}
-		return resolveExplicit(explicit)
+		return resolveExplicit(tool, explicit)
 	}
 	if verbose {
 		fmt.Println("  [resolve] Step 1: No explicit override")
@@ -182,7 +191,7 @@ func ResolveNodeVerbose(explicit string, verbose bool) (*Resolution, error) {
 		fmt.Printf("  [resolve] Step 2: Searching for project config from %s\n", cwd)
 	}
 
-	res, err := resolveFromProject(cwd, verbose)
+	res, err := resolveFromProject(tool, cwd, verbose)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +206,7 @@ func ResolveNodeVerbose(explicit string, verbose bool) (*Resolution, error) {
 		fmt.Println("  [resolve] Step 3: No project config found, checking global default")
 	}
 
-	res, err = resolveFromGlobal()
+	res, err = resolveFromGlobal(tool)
 	if err != nil {
 		if verbose {
 			fmt.Printf("  [resolve] Global default failed: %v\n", err)
@@ -212,13 +221,13 @@ func ResolveNodeVerbose(explicit string, verbose bool) (*Resolution, error) {
 	return res, nil
 }
 
-func resolveExplicit(ver string) (*Resolution, error) {
-	binPath, err := requireBinaryExists(ver, "")
+func resolveExplicit(tool, ver string) (*Resolution, error) {
+	binPath, err := requireToolBinaryExists(tool, ver, "")
 	if err != nil {
 		return nil, err
 	}
 	return &Resolution{
-		Tool:       "node",
+		Tool:       tool,
 		Version:    ver,
 		BinaryPath: binPath,
 		Source:     SourceExplicit,
@@ -227,14 +236,12 @@ func resolveExplicit(ver string) (*Resolution, error) {
 
 const maxResolveDepth = 20
 
-func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
+func resolveFromProject(tool, dir string, verbose bool) (*Resolution, error) {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	// Walk up directories looking for .driftr.toml or package.json (volta),
-	// checking both in each directory before moving to the parent.
 	current := absDir
 	depth := 0
 	for {
@@ -254,11 +261,13 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 		if err != nil {
 			return nil, err
 		}
-		if cfg != nil && cfg.Tools.Node != "" {
-			return resolveProjectVersion(cfg.Tools.Node, current, SourceProject)
+		if cfg != nil {
+			if ver := cfg.Tools.GetTool(tool); ver != "" {
+				return resolveProjectVersion(tool, ver, current, SourceProject)
+			}
 		}
 
-		// Check package.json volta.node.
+		// Check package.json driftr key.
 		pkgPath := filepath.Join(current, "package.json")
 		if verbose {
 			fmt.Printf("  [resolve]   Checking: %s (driftr)\n", pkgPath)
@@ -269,7 +278,9 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 			return nil, err
 		}
 		if pkg != nil {
-			return resolveProjectVersion(pkg.Driftr.Node, current, SourcePackageJSON)
+			if ver := pkg.Driftr.GetTool(tool); ver != "" {
+				return resolveProjectVersion(tool, ver, current, SourcePackageJSON)
+			}
 		}
 
 		depth++
@@ -283,13 +294,13 @@ func resolveFromProject(dir string, verbose bool) (*Resolution, error) {
 	return nil, nil
 }
 
-func resolveProjectVersion(ver, dir string, source Source) (*Resolution, error) {
-	binPath, err := requireBinaryExists(ver, "pinned in "+dir)
+func resolveProjectVersion(tool, ver, dir string, source Source) (*Resolution, error) {
+	binPath, err := requireToolBinaryExists(tool, ver, "pinned in "+dir)
 	if err != nil {
 		return nil, err
 	}
 	return &Resolution{
-		Tool:       "node",
+		Tool:       tool,
 		Version:    ver,
 		BinaryPath: binPath,
 		Source:     source,
@@ -297,23 +308,23 @@ func resolveProjectVersion(ver, dir string, source Source) (*Resolution, error) 
 	}, nil
 }
 
-func resolveFromGlobal() (*Resolution, error) {
+func resolveFromGlobal(tool string) (*Resolution, error) {
 	cfg, err := config.LoadGlobal()
 	if err != nil {
 		return nil, err
 	}
 
-	if cfg.Default.Node == "" {
-		return nil, fmt.Errorf("no Node.js version configured. Run `driftr install node@<version>` and `driftr default node@<version>`")
+	ver := cfg.Default.GetTool(tool)
+	if ver == "" {
+		return nil, fmt.Errorf("no %s version configured. Run `driftr install %s@<version>` and `driftr default %s@<version>`", tool, tool, tool)
 	}
 
-	ver := cfg.Default.Node
-	binPath, err := requireBinaryExists(ver, "global default")
+	binPath, err := requireToolBinaryExists(tool, ver, "global default")
 	if err != nil {
 		return nil, err
 	}
 	return &Resolution{
-		Tool:       "node",
+		Tool:       tool,
 		Version:    ver,
 		BinaryPath: binPath,
 		Source:     SourceGlobal,

@@ -11,11 +11,13 @@ import (
 func newDefaultCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "default <tool@version>",
-		Short: "Set the global default Node.js version",
-		Long:  "Set which Node.js version is used outside of pinned projects.\n\nExample:\n  driftr default node@24.0.0",
+		Short: "Set the global default version for a tool",
+		Long:  "Set which version is used outside of pinned projects.\n\nExamples:\n  driftr default node@24.0.0\n  driftr default node@24",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			versionStr, _, err := resolver.RequireInstalled(args[0])
+			tool, versionSpec := parseToolVersion(args[0])
+
+			versionStr, _, err := resolver.RequireToolInstalled(tool, versionSpec)
 			if err != nil {
 				return err
 			}
@@ -25,12 +27,12 @@ func newDefaultCmd() *cobra.Command {
 				return err
 			}
 
-			cfg.Default.Node = versionStr
+			cfg.Default.SetTool(tool, versionStr)
 			if err := config.SaveGlobal(cfg); err != nil {
 				return err
 			}
 
-			fmt.Printf("Set global default to Node.js %s\n", versionStr)
+			fmt.Printf("Set global default to %s %s\n", tool, versionStr)
 			return nil
 		},
 	}

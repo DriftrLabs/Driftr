@@ -15,11 +15,19 @@ type Version struct {
 	Latest bool // true when input was "latest" or "node@latest"
 }
 
+// stripToolPrefix removes an optional "tool@" prefix (e.g. "node@24" → "24").
+func stripToolPrefix(s string) string {
+	if i := strings.Index(s, "@"); i >= 0 {
+		return s[i+1:]
+	}
+	return s
+}
+
 // Parse parses a version string like "24", "24.0", or "24.0.1".
-// Supports optional "v" prefix and "node@" prefix.
+// Supports optional "v" prefix and "tool@" prefix (e.g. "node@24").
 func Parse(s string) (Version, error) {
 	raw := s
-	s = strings.TrimPrefix(s, "node@")
+	s = stripToolPrefix(s)
 	s = strings.TrimPrefix(s, "v")
 	s = strings.TrimSpace(s)
 
@@ -61,7 +69,7 @@ func Parse(s string) (Version, error) {
 
 // IsPartial returns true if the version was specified without all three components.
 func (v Version) IsPartial() bool {
-	raw := strings.TrimPrefix(v.Raw, "node@")
+	raw := stripToolPrefix(v.Raw)
 	raw = strings.TrimPrefix(raw, "v")
 	parts := strings.Split(raw, ".")
 	return len(parts) < 3
@@ -87,7 +95,7 @@ func (v Version) Matches(other Version) bool {
 	if v.Major != other.Major {
 		return false
 	}
-	raw := strings.TrimPrefix(v.Raw, "node@")
+	raw := stripToolPrefix(v.Raw)
 	raw = strings.TrimPrefix(raw, "v")
 	parts := strings.Split(raw, ".")
 	if len(parts) == 1 {

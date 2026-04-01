@@ -34,40 +34,33 @@ func ToolsDir() (string, error) {
 	return filepath.Join(home, "tools"), nil
 }
 
-// NodeVersionDir returns the directory for a specific Node version.
-func NodeVersionDir(version string) (string, error) {
+// ToolVersionDir returns the directory for a specific tool and version.
+func ToolVersionDir(tool, version string) (string, error) {
 	tools, err := ToolsDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(tools, "node", version), nil
+	return filepath.Join(tools, tool, version), nil
+}
+
+// NodeVersionDir returns the directory for a specific Node version.
+func NodeVersionDir(version string) (string, error) {
+	return ToolVersionDir("node", version)
 }
 
 // NodeBinary returns the path to the node binary for a given version.
 func NodeBinary(version string) (string, error) {
-	dir, err := NodeVersionDir(version)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "bin", "node"), nil
+	return ToolBinary("node", version)
 }
 
 // NpmBinary returns the path to the npm binary for a given version.
 func NpmBinary(version string) (string, error) {
-	dir, err := NodeVersionDir(version)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "bin", "npm"), nil
+	return ToolBinary("npm", version)
 }
 
 // NpxBinary returns the path to the npx binary for a given version.
 func NpxBinary(version string) (string, error) {
-	dir, err := NodeVersionDir(version)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "bin", "npx"), nil
+	return ToolBinary("npx", version)
 }
 
 // CacheDir returns the cache directory (~/.driftr/cache).
@@ -90,6 +83,11 @@ func GlobalConfigPath() (string, error) {
 
 // EnsureDirs creates all required Driftr directories.
 func EnsureDirs() error {
+	return EnsureToolDirs("node")
+}
+
+// EnsureToolDirs creates all required Driftr directories including tool-specific ones.
+func EnsureToolDirs(tools ...string) error {
 	home, err := DriftrHome()
 	if err != nil {
 		return err
@@ -97,9 +95,12 @@ func EnsureDirs() error {
 
 	dirs := []string{
 		filepath.Join(home, "bin"),
-		filepath.Join(home, "tools", "node"),
 		filepath.Join(home, "config"),
 		filepath.Join(home, "cache"),
+	}
+
+	for _, tool := range tools {
+		dirs = append(dirs, filepath.Join(home, "tools", tool))
 	}
 
 	for _, d := range dirs {
@@ -137,18 +138,29 @@ func OS() string {
 	}
 }
 
-// ToolBinary returns the binary path for a given tool and Node.js version.
+// toolBinaryMap maps tool names to their parent tool (for tools bundled with node)
+// and binary name within the version directory.
+var toolBinaryMap = map[string]struct {
+	parent string // which tool's version dir contains this binary
+	binary string // binary name under bin/
+}{
+	"node": {parent: "node", binary: "node"},
+	"npm":  {parent: "node", binary: "npm"},
+	"npx":  {parent: "node", binary: "npx"},
+}
+
+// ToolBinary returns the binary path for a given tool and version.
+// For bundled tools (npm, npx), the version refers to the parent tool (node).
 func ToolBinary(tool, version string) (string, error) {
-	switch tool {
-	case "node":
-		return NodeBinary(version)
-	case "npm":
-		return NpmBinary(version)
-	case "npx":
-		return NpxBinary(version)
-	default:
+	entry, ok := toolBinaryMap[tool]
+	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", tool)
 	}
+	dir, err := ToolVersionDir(entry.parent, version)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "bin", entry.binary), nil
 }
 
 // ArchiveExt returns the archive extension for the current platform.

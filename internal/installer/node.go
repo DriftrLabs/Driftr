@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -174,18 +175,23 @@ func resolveLatestVersion(v version.Version) (string, error) {
 
 // ListInstalledVersions returns all installed Node.js versions.
 func ListInstalledVersions() ([]string, error) {
+	return ListInstalledToolVersions("node")
+}
+
+// ListInstalledToolVersions returns all installed versions for a given tool.
+func ListInstalledToolVersions(tool string) ([]string, error) {
 	toolsDir, err := platform.ToolsDir()
 	if err != nil {
 		return nil, err
 	}
 
-	nodeDir := toolsDir + "/node"
-	entries, err := os.ReadDir(nodeDir)
+	toolDir := filepath.Join(toolsDir, tool)
+	entries, err := os.ReadDir(toolDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to read node versions: %w", err)
+		return nil, fmt.Errorf("failed to read %s versions: %w", tool, err)
 	}
 
 	var versions []string
