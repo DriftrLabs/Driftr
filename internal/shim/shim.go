@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
@@ -12,9 +11,8 @@ import (
 // shimTools lists the tools for which shims are created in MVP.
 var shimTools = []string{"node", "npm", "npx"}
 
-// GenerateShims creates shim scripts/binaries in ~/.driftr/bin/.
-// On Unix, these are shell scripts that invoke `driftr shim <tool>`.
-// On Windows, these would be .cmd files (future).
+// GenerateShims creates shim shell scripts in ~/.driftr/bin/.
+// Each shim invokes `driftr shim <tool>` to resolve and exec the real binary.
 func GenerateShims() error {
 	binDir, err := platform.BinDir()
 	if err != nil {
@@ -46,12 +44,6 @@ func GenerateShims() error {
 
 func writeShim(binDir, tool, driftrBin string) error {
 	shimPath := filepath.Join(binDir, tool)
-
-	if runtime.GOOS == "windows" {
-		shimPath += ".cmd"
-		content := fmt.Sprintf("@echo off\r\n\"%s\" shim %s %%*\r\n", driftrBin, tool)
-		return os.WriteFile(shimPath, []byte(content), 0o755)
-	}
 
 	content := fmt.Sprintf(`#!/bin/sh
 exec "%s" shim %s "$@"
