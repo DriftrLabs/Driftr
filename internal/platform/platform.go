@@ -138,18 +138,27 @@ func OS() string {
 	}
 }
 
-// toolBinaryMap maps tool names to their parent tool (for tools bundled with node)
-// and binary name within the version directory.
-var toolBinaryMap = map[string]struct {
-	parent string // which tool's version dir contains this binary
-	binary string // binary name under bin/
-}{
-	"node": {parent: "node", binary: "node"},
-	"npm":  {parent: "node", binary: "npm"},
-	"npx":  {parent: "node", binary: "npx"},
-	"pnpm": {parent: "pnpm", binary: "pnpm"},
-	"pnpx": {parent: "pnpm", binary: "pnpx"},
-	"yarn": {parent: "yarn", binary: "yarn"},
+// ToolEntry describes how to find and execute a tool binary.
+type ToolEntry struct {
+	Parent    string // which tool's version dir contains this binary
+	Binary    string // binary name under bin/
+	NeedsNode bool   // true if the binary is a JS script requiring node to execute
+}
+
+// toolBinaryMap maps tool names to their parent tool and binary info.
+var toolBinaryMap = map[string]ToolEntry{
+	"node": {Parent: "node", Binary: "node"},
+	"npm":  {Parent: "node", Binary: "npm"},
+	"npx":  {Parent: "node", Binary: "npx"},
+	"pnpm": {Parent: "pnpm", Binary: "pnpm"},
+	"pnpx": {Parent: "pnpm", Binary: "pnpx"},
+	"yarn": {Parent: "yarn", Binary: "yarn.js", NeedsNode: true},
+}
+
+// LookupTool returns the ToolEntry for a tool, or false if unknown.
+func LookupTool(tool string) (ToolEntry, bool) {
+	entry, ok := toolBinaryMap[tool]
+	return entry, ok
 }
 
 // ToolBinary returns the binary path for a given tool and version.
@@ -159,11 +168,11 @@ func ToolBinary(tool, version string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unknown tool: %s", tool)
 	}
-	dir, err := ToolVersionDir(entry.parent, version)
+	dir, err := ToolVersionDir(entry.Parent, version)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "bin", entry.binary), nil
+	return filepath.Join(dir, "bin", entry.Binary), nil
 }
 
 // ArchiveExt returns the archive extension for the current platform.
