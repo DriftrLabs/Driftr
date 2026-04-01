@@ -6,25 +6,17 @@ This document describes Driftr's internal design for contributors and anyone cur
 
 Driftr is a shim-based toolchain manager. When you type `node`, a lightweight shim intercepts the call, resolves the correct Node.js version, and replaces itself with the real binary using `syscall.Exec`. The entire resolution happens in single-digit milliseconds.
 
-```
-user types "node app.js"
-        │
-        ▼
-~/.driftr/bin/node          shell script shim
-        │
-        ▼
-driftr shim node app.js     hidden CLI command
-        │
-        ▼
-resolver                    walks config chain
-        │
-        ▼
-syscall.Exec(node, ...)     replaces process with real node
+```mermaid
+flowchart TD
+    A["user types 'node app.js'"] --> B["~/.driftr/bin/node\n(shell script shim)"]
+    B --> C["driftr shim node app.js\n(hidden CLI command)"]
+    C --> D["resolver\n(walks config chain)"]
+    D --> E["syscall.Exec(node, ...)\n(replaces process with real node)"]
 ```
 
 ## Module Map
 
-```
+```text
 cmd/driftr/
   main.go                   entry point
 
@@ -124,35 +116,26 @@ If extraction fails (disk full, corrupt archive, interrupted), the partially ext
 
 ## Data Flow: Install
 
-```
-driftr install node@22
-        │
-        ├─ version.Parse("node@22")           → Version{Major:22, Partial:true}
-        │
-        ├─ resolveLatestVersion(22)            → fetches index.json → "22.14.0"
-        │
-        ├─ Download("22.14.0")                 → HTTP GET → ~/.driftr/cache/node-v22.14.0-*.tar.gz
-        │
-        ├─ VerifyChecksum(archive, "22.14.0")  → fetch SHASUMS256.txt → compare SHA256
-        │
-        └─ Extract(archive, "22.14.0")         → tar.gz → ~/.driftr/tools/node/22.14.0/
+```mermaid
+flowchart TD
+    A["driftr install node@22"] --> B["version.Parse('node@22')\nVersion{Major:22, Partial:true}"]
+    B --> C["resolveLatestVersion(22)\nfetches index.json → '22.14.0'"]
+    C --> D["Download('22.14.0')\nHTTP GET → ~/.driftr/cache/node-v22.14.0-*.tar.gz"]
+    D --> E["VerifyChecksum(archive, '22.14.0')\nfetch SHASUMS256.txt → compare SHA256"]
+    E --> F["Extract(archive, '22.14.0')\ntar.gz → ~/.driftr/tools/node/22.14.0/"]
 ```
 
 ## Data Flow: Shim Execution
 
-```
-$ node app.js
-        │
-        ├─ ~/.driftr/bin/node                  → exec driftr shim node app.js
-        │
-        ├─ resolver.ResolveBinary("node", "")
-        │   ├─ check explicit override         → none
-        │   ├─ walk dirs for .driftr.toml      → found at /project/.driftr.toml
-        │   ├─ (or package.json driftr key)
-        │   └─ return /tools/node/22.14.0/bin/node
-        │
-        └─ syscall.Exec(node, ["node", "app.js"], env)
-            └─ process replaced — node runs directly
+```mermaid
+flowchart TD
+    A["$ node app.js"] --> B["~/.driftr/bin/node\nexec driftr shim node app.js"]
+    B --> C["resolver.ResolveBinary('node', '')"]
+    C --> D["check explicit override → none"]
+    C --> E["walk dirs for .driftr.toml\nfound at /project/.driftr.toml"]
+    C --> F["(or package.json driftr key)"]
+    D & E & F --> G["return /tools/node/22.14.0/bin/node"]
+    G --> H["syscall.Exec(node, ['node', 'app.js'], env)\nprocess replaced — node runs directly"]
 ```
 
 ## Platform Abstraction
