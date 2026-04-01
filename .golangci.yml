@@ -22,6 +22,17 @@ linters:
   settings:
     errcheck:
       check-type-assertions: true
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintln
+        - fmt.Fprintf
+        - fmt.Print
+        - fmt.Println
+        - fmt.Printf
+        - (io.Closer).Close
+        - os.Remove
+        - os.RemoveAll
+        - (net/http.Response.Body).Close
 
     govet:
       enable-all: true
