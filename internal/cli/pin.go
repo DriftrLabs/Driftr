@@ -94,9 +94,9 @@ func detectPinFormat(dir string) pinFormat {
 // promptPinFormat asks the user to choose a storage format.
 func promptPinFormat(cmd *cobra.Command) (pinFormat, error) {
 	// Non-interactive: default to .driftr.toml.
-	stat, err := os.Stdin.Stat()
-	if err != nil || (stat.Mode()&os.ModeCharDevice) == 0 {
-		return formatTOML, nil //nolint:nilerr // intentional: default to TOML when stdin is unavailable
+	// Check for a real terminal (not just a char device like /dev/null).
+	if !isStdinTerminal() {
+		return formatTOML, nil
 	}
 
 	fmt.Fprintln(cmd.ErrOrStderr(), "No existing project config found. How should the version be stored?")
