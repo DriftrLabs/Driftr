@@ -10,18 +10,25 @@ import (
 
 func newListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "list",
+		Use:     "list [tool]",
 		Aliases: []string{"ls"},
-		Short:   "List installed Node.js versions",
+		Short:   "List installed versions",
+		Long:    "List installed versions for a tool. Defaults to node.\n\nExamples:\n  driftr list\n  driftr list node",
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			versions, err := installer.ListInstalledVersions()
+			tool := "node"
+			if len(args) > 0 {
+				tool = args[0]
+			}
+
+			versions, err := installer.ListInstalledToolVersions(tool)
 			if err != nil {
 				return fmt.Errorf("failed to list versions: %w", err)
 			}
 
 			if len(versions) == 0 {
-				fmt.Println("No Node.js versions installed.")
-				fmt.Println("Run `driftr install node@<version>` to get started.")
+				fmt.Printf("No %s versions installed.\n", tool)
+				fmt.Printf("Run `driftr install %s@<version>` to get started.\n", tool)
 				return nil
 			}
 
@@ -30,16 +37,18 @@ func newListCmd() *cobra.Command {
 				return fmt.Errorf("failed to load global config: %w", err)
 			}
 
-			fmt.Println("Installed Node.js versions:")
+			defaultVer := cfg.Default.GetTool(tool)
+
+			fmt.Printf("Installed %s versions:\n", tool)
 			for _, v := range versions {
 				marker := "  "
-				if v == cfg.Default.Node {
+				if v == defaultVer {
 					marker = "* "
 				}
 				fmt.Printf("  %s%s\n", marker, v)
 			}
 
-			if cfg.Default.Node != "" {
+			if defaultVer != "" {
 				fmt.Printf("\n  * = global default\n")
 			}
 

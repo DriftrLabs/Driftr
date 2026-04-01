@@ -26,8 +26,8 @@ func newPinCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "pin <tool@version>",
-		Short: "Pin a Node.js version to the current project",
-		Long: `Pin a Node.js version to the current project.
+		Short: "Pin a tool version to the current project",
+		Long: `Pin a tool version to the current project.
 
 The version is stored in .driftr.toml or package.json (driftr key).
 On first use, you'll be asked which format to use. Subsequent pins
@@ -38,7 +38,9 @@ Examples:
   driftr pin node@22.14.0 --migrate   # switch storage format`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			versionStr, _, err := resolver.RequireInstalled(args[0])
+			tool, versionSpec := parseToolVersion(args[0])
+
+			versionStr, _, err := resolver.RequireToolInstalled(tool, versionSpec)
 			if err != nil {
 				return err
 			}
@@ -51,7 +53,7 @@ Examples:
 			current := detectPinFormat(cwd)
 
 			if migrate {
-				return migratePin(cwd, versionStr, current)
+				return migratePin(cwd, tool, versionStr, current)
 			}
 
 			format := current
@@ -63,7 +65,7 @@ Examples:
 				}
 			}
 
-			return savePin(cwd, versionStr, format)
+			return savePin(cwd, tool, versionStr, format)
 		},
 	}
 
@@ -96,7 +98,7 @@ func promptPinFormat(cmd *cobra.Command) (pinFormat, error) {
 		return formatTOML, nil
 	}
 
-	fmt.Fprintln(cmd.ErrOrStderr(), "No existing project config found. How should the Node.js version be stored?")
+	fmt.Fprintln(cmd.ErrOrStderr(), "No existing project config found. How should the version be stored?")
 	fmt.Fprintln(cmd.ErrOrStderr(), "  1) .driftr.toml (recommended)")
 	fmt.Fprintln(cmd.ErrOrStderr(), "  2) package.json (driftr key)")
 	fmt.Fprint(cmd.ErrOrStderr(), "Choose [1/2]: ")
@@ -116,13 +118,13 @@ func promptPinFormat(cmd *cobra.Command) (pinFormat, error) {
 }
 
 // savePin writes the version in the given format.
-func savePin(dir, versionStr string, format pinFormat) error {
+func savePin(dir, tool, versionStr string, format pinFormat) error {
 	switch format {
 	case formatPackageJSON:
-		if err := config.SavePackageJSON(dir, versionStr); err != nil {
+		if err := config.SavePackageJSONTool(dir, tool, versionStr); err != nil {
 			return err
 		}
-		fmt.Printf("Pinned Node.js %s in %s/package.json\n", versionStr, dir)
+		fmt.Printf("Pinned %s %s in %s/package.json\n", tool, versionStr, dir)
 	default:
 		cfg, err := config.LoadProject(dir)
 		if err != nil {
@@ -131,40 +133,40 @@ func savePin(dir, versionStr string, format pinFormat) error {
 		if cfg == nil {
 			cfg = &config.ProjectConfig{}
 		}
-		cfg.Tools.Node = versionStr
+		cfg.Tools.SetTool(tool, versionStr)
 		if err := config.SaveProject(dir, cfg); err != nil {
 			return err
 		}
-		fmt.Printf("Pinned Node.js %s in %s/%s\n", versionStr, dir, config.ProjectConfigFile)
+		fmt.Printf("Pinned %s %s in %s/%s\n", tool, versionStr, dir, config.ProjectConfigFile)
 	}
 	return nil
 }
 
 // migratePin switches from the current format to the other one.
-func migratePin(dir, versionStr string, current pinFormat) error {
+func migratePin(dir, tool, versionStr string, current pinFormat) error {
 	switch current {
 	case formatTOML:
 		// Migrate TOML → package.json.
-		if err := config.SavePackageJSON(dir, versionStr); err != nil {
+		if err := config.SavePackageJSONTool(dir, tool, versionStr); err != nil {
 			return err
 		}
 		os.Remove(filepath.Join(dir, config.ProjectConfigFile))
-		fmt.Printf("Migrated Node.js %s from %s to package.json\n", versionStr, config.ProjectConfigFile)
+		fmt.Printf("Migrated %s %s from %s to package.json\n", tool, versionStr, config.ProjectConfigFile)
 
 	case formatPackageJSON:
 		// Migrate package.json → TOML.
 		cfg := &config.ProjectConfig{}
-		cfg.Tools.Node = versionStr
+		cfg.Tools.SetTool(tool, versionStr)
 		if err := config.SaveProject(dir, cfg); err != nil {
 			return err
 		}
 		if err := config.RemoveDriftrFromPackageJSON(dir); err != nil {
 			return err
 		}
-		fmt.Printf("Migrated Node.js %s from package.json to %s\n", versionStr, config.ProjectConfigFile)
+		fmt.Printf("Migrated %s %s from package.json to %s\n", tool, versionStr, config.ProjectConfigFile)
 
 	case formatNone:
-		return fmt.Errorf("no existing config to migrate. Run `driftr pin node@<version>` first")
+		return fmt.Errorf("no existing config to migrate. Run `driftr pin %s@<version>` first", tool)
 	}
 	return nil
 }

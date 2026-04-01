@@ -10,11 +10,12 @@ import (
 func newInstallCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "install <tool@version>",
-		Short: "Install a Node.js version",
-		Long:  "Download and install a specific Node.js version.\n\nExamples:\n  driftr install node@24\n  driftr install node@22.14.0",
+		Short: "Install a tool version",
+		Long:  "Download and install a specific tool version.\n\nExamples:\n  driftr install node@24\n  driftr install node@22.14.0\n  driftr install node@latest",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			spec := args[0]
+			tool, _ := parseToolVersion(spec)
 
 			fmt.Printf("Installing %s...\n", spec)
 
@@ -23,7 +24,7 @@ func newInstallCmd() *cobra.Command {
 				return fmt.Errorf("installation failed: %w", err)
 			}
 
-			fmt.Printf("Installed Node.js %s\n", resolved)
+			fmt.Printf("Installed %s %s\n", tool, resolved)
 			return nil
 		},
 	}

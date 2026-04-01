@@ -16,7 +16,33 @@ type GlobalConfig struct {
 
 // DefaultConfig holds the default tool versions.
 type DefaultConfig struct {
-	Node string `toml:"node"`
+	Node  string            `toml:"node"`            // backwards compat: [default] node = "..."
+	Tools map[string]string `toml:"tools,omitempty"` // [default.tools] node = "..."
+}
+
+// GetTool returns the default version for a tool, checking both the map and legacy field.
+func (d *DefaultConfig) GetTool(tool string) string {
+	if d.Tools != nil {
+		if v, ok := d.Tools[tool]; ok {
+			return v
+		}
+	}
+	if tool == "node" {
+		return d.Node
+	}
+	return ""
+}
+
+// SetTool sets the default version for a tool.
+func (d *DefaultConfig) SetTool(tool, version string) {
+	if d.Tools == nil {
+		d.Tools = make(map[string]string)
+	}
+	d.Tools[tool] = version
+	// Keep legacy field in sync for backwards compat.
+	if tool == "node" {
+		d.Node = version
+	}
 }
 
 // LoadGlobal reads the global configuration file.

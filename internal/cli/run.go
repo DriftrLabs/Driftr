@@ -14,7 +14,7 @@ func newRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:                "run [flags] -- <command> [args...]",
 		Short:              "Run a command under a specific Node.js version",
-		Long:               "Execute a command using an explicitly specified Node.js version without changing defaults.\n\nExample:\n  driftr run --node 24.0.0 -- npm test",
+		Long:               "Execute a command using an explicitly specified Node.js version without changing defaults.\n\nExamples:\n  driftr run --node 24.0.0 -- npm test\n  driftr run --node 24 -- node -v",
 		DisableFlagParsing: false,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {

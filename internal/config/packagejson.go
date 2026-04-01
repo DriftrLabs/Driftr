@@ -14,12 +14,28 @@ type PackageJSON struct {
 }
 
 // DriftrConfig holds the Driftr tool pinning from package.json.
+// Supports both the legacy `"node"` field and additional tools.
 type DriftrConfig struct {
-	Node string `json:"node"`
+	Node string `json:"node,omitempty"`
 }
 
-// LoadPackageJSON reads the driftr.node version from package.json in the given directory.
-// Returns (nil, nil) if the file doesn't exist or has no driftr.node field.
+// GetTool returns the pinned version for a tool from package.json.
+func (dc *DriftrConfig) GetTool(tool string) string {
+	if tool == "node" {
+		return dc.Node
+	}
+	return ""
+}
+
+// SetTool sets the pinned version for a tool.
+func (dc *DriftrConfig) SetTool(tool, version string) {
+	if tool == "node" {
+		dc.Node = version
+	}
+}
+
+// LoadPackageJSON reads driftr tool versions from package.json in the given directory.
+// Returns (nil, nil) if the file doesn't exist or has no driftr key with tool versions.
 func LoadPackageJSON(dir string) (*PackageJSON, error) {
 	path := filepath.Join(dir, "package.json")
 
@@ -36,6 +52,7 @@ func LoadPackageJSON(dir string) (*PackageJSON, error) {
 		return nil, fmt.Errorf("failed to parse %s: %w", path, err)
 	}
 
+	// Return nil if no tool versions are configured.
 	if pkg.Driftr.Node == "" {
 		return nil, nil
 	}
@@ -43,9 +60,14 @@ func LoadPackageJSON(dir string) (*PackageJSON, error) {
 	return &pkg, nil
 }
 
-// SavePackageJSON writes the driftr.node version into an existing package.json.
+// SavePackageJSON writes a tool version into the driftr key in package.json.
 // Returns an error if package.json does not exist in the directory.
-func SavePackageJSON(dir string, nodeVersion string) error {
+func SavePackageJSON(dir string, version string) error {
+	return SavePackageJSONTool(dir, "node", version)
+}
+
+// SavePackageJSONTool writes a specific tool version into the driftr key in package.json.
+func SavePackageJSONTool(dir, tool, version string) error {
 	path := filepath.Join(dir, "package.json")
 
 	data, err := os.ReadFile(path)
@@ -56,7 +78,12 @@ func SavePackageJSON(dir string, nodeVersion string) error {
 		return fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	driftrValue, err := json.Marshal(DriftrConfig{Node: nodeVersion})
+	// Load existing driftr config to preserve other tools.
+	var existing PackageJSON
+	_ = json.Unmarshal(data, &existing)
+	existing.Driftr.SetTool(tool, version)
+
+	driftrValue, err := json.Marshal(existing.Driftr)
 	if err != nil {
 		return err
 	}

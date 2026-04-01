@@ -44,7 +44,7 @@ echo
 echo -e "${BLUE}[1] Basic CLI${NC}"
 check "driftr --help works" driftr --help
 check_output "help shows available commands" "Available Commands" driftr --help
-check_output "list shows no versions" "No Node.js versions installed" driftr list
+check_output "list shows no versions" "No node versions installed" driftr list
 echo
 
 # ── 2. Setup ──────────────────────────────────
