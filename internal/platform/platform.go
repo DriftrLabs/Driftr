@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -185,7 +186,7 @@ func ListToolVersions(tool string) ([]string, error) {
 	toolDir := filepath.Join(toolsDir, tool)
 	entries, err := os.ReadDir(toolDir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to read %s versions: %w", tool, err)

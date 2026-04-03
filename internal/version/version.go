@@ -17,8 +17,8 @@ type Version struct {
 
 // stripToolPrefix removes an optional "tool@" prefix (e.g. "node@24" → "24").
 func stripToolPrefix(s string) string {
-	if i := strings.Index(s, "@"); i >= 0 {
-		return s[i+1:]
+	if _, after, ok := strings.Cut(s, "@"); ok {
+		return after
 	}
 	return s
 }

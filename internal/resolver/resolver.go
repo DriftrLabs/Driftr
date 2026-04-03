@@ -1,10 +1,12 @@
 package resolver
 
 import (
+	"cmp"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/DriftrLabs/driftr/internal/config"
 	"github.com/DriftrLabs/driftr/internal/platform"
@@ -63,14 +65,14 @@ func resolveInstalledPartial(tool string, v version.Version) (string, string, er
 	}
 
 	// Sort descending to pick the latest.
-	sort.Slice(matches, func(i, j int) bool {
-		if matches[i].Major != matches[j].Major {
-			return matches[i].Major > matches[j].Major
+	slices.SortFunc(matches, func(a, b version.Version) int {
+		if c := cmp.Compare(b.Major, a.Major); c != 0 {
+			return c
 		}
-		if matches[i].Minor != matches[j].Minor {
-			return matches[i].Minor > matches[j].Minor
+		if c := cmp.Compare(b.Minor, a.Minor); c != 0 {
+			return c
 		}
-		return matches[i].Patch > matches[j].Patch
+		return cmp.Compare(b.Patch, a.Patch)
 	})
 
 	best := matches[0].String()
@@ -92,7 +94,7 @@ func requireToolBinaryExists(tool, ver, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
+	if _, err := os.Stat(binPath); errors.Is(err, os.ErrNotExist) {
 		if context != "" {
 			return "", fmt.Errorf("%s %s (%s) is not installed. Run `driftr install %s@%s`", tool, ver, context, tool, ver)
 		}

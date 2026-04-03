@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -76,7 +77,7 @@ func InstallYarn(versionStr string, verbose bool) (string, error) {
 	}
 
 	// Verify the binary exists after extraction.
-	if _, err := os.Stat(binPath); os.IsNotExist(err) {
+	if _, err := os.Stat(binPath); errors.Is(err, os.ErrNotExist) {
 		os.RemoveAll(versionDir)
 		return "", fmt.Errorf("yarn binary not found after extraction at %s", binPath)
 	}

@@ -3,6 +3,7 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -41,7 +42,7 @@ func LoadPackageJSON(dir string) (*PackageJSON, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to read %s: %w", path, err)
@@ -72,7 +73,7 @@ func SavePackageJSONTool(dir, tool, version string) error {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("no package.json found in %s. Run `npm init` first", dir)
 		}
 		return fmt.Errorf("failed to read %s: %w", path, err)
@@ -103,7 +104,7 @@ func RemoveDriftrFromPackageJSON(dir string) error {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
 		return fmt.Errorf("failed to read %s: %w", path, err)
