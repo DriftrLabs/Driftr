@@ -9,6 +9,7 @@ import (
 
 	"github.com/DriftrLabs/driftr/internal/config"
 	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/version"
 )
 
 func newUninstallCmd() *cobra.Command {
@@ -20,27 +21,40 @@ func newUninstallCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tool, versionSpec := parseToolVersion(args[0])
 
-			if _, ok := platform.LookupTool(tool); !ok {
+			// Resolve bundled tools to their parent (e.g. npm → node, pnpx → pnpm).
+			entry, ok := platform.LookupTool(tool)
+			if !ok {
 				return fmt.Errorf("unknown tool: %s. Supported tools: node, pnpm, yarn", tool)
 			}
+			tool = entry.Parent
 
 			if versionSpec == "" {
 				return fmt.Errorf("version required. Usage: driftr uninstall %s@<version>", tool)
 			}
 
+			// Validate and normalize the version string to prevent path traversal.
+			v, err := version.Parse(versionSpec)
+			if err != nil {
+				return fmt.Errorf("invalid version: %w", err)
+			}
+			versionStr := v.String()
+
 			// Verify the version is installed.
-			versionDir, err := platform.ToolVersionDir(tool, versionSpec)
+			versionDir, err := platform.ToolVersionDir(tool, versionStr)
 			if err != nil {
 				return err
 			}
-			if _, err := os.Stat(versionDir); errors.Is(err, os.ErrNotExist) {
-				return fmt.Errorf("%s %s is not installed", tool, versionSpec)
+			if _, err := os.Stat(versionDir); err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					return fmt.Errorf("%s %s is not installed", tool, versionStr)
+				}
+				return fmt.Errorf("failed to check installed version %s %s: %w", tool, versionStr, err)
 			}
 
 			// Warn if this is the global default.
 			cfg, err := config.LoadGlobal()
-			if err == nil && cfg.Default.GetTool(tool) == versionSpec {
-				fmt.Printf("Warning: %s %s is the current global default. Run `driftr default %s@<version>` to set a new one.\n", tool, versionSpec, tool)
+			if err == nil && cfg.Default.GetTool(tool) == versionStr {
+				fmt.Printf("Warning: %s %s is the current global default. Run `driftr default %s@<version>` to set a new one.\n", tool, versionStr, tool)
 			}
 
 			if verbose {
@@ -48,10 +62,10 @@ func newUninstallCmd() *cobra.Command {
 			}
 
 			if err := os.RemoveAll(versionDir); err != nil {
-				return fmt.Errorf("failed to remove %s %s: %w", tool, versionSpec, err)
+				return fmt.Errorf("failed to remove %s %s: %w", tool, versionStr, err)
 			}
 
-			fmt.Printf("Uninstalled %s %s\n", tool, versionSpec)
+			fmt.Printf("Uninstalled %s %s\n", tool, versionStr)
 			return nil
 		},
 	}
