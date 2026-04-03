@@ -35,7 +35,9 @@ func extractToRoot(root *os.Root, relPath string, hdr *tar.Header, tr *tar.Reade
 			outFile.Close()
 			return fmt.Errorf("failed to write file %s: %w", relPath, err)
 		}
-		outFile.Close()
+		if err := outFile.Close(); err != nil {
+			return fmt.Errorf("failed to close file %s: %w", relPath, err)
+		}
 
 	case tar.TypeSymlink:
 		if dir := filepath.Dir(relPath); dir != "." {
@@ -43,7 +45,9 @@ func extractToRoot(root *os.Root, relPath string, hdr *tar.Header, tr *tar.Reade
 				return fmt.Errorf("failed to create parent dir for %s: %w", relPath, err)
 			}
 		}
-		_ = root.Remove(relPath) // Remove existing symlink if any.
+		if err := root.Remove(relPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove existing path %s before creating symlink: %w", relPath, err)
+		}
 		if err := root.Symlink(hdr.Linkname, relPath); err != nil {
 			return fmt.Errorf("failed to create symlink %s: %w", relPath, err)
 		}
@@ -132,7 +136,10 @@ func Extract(archivePath, version string, verbose bool) error {
 
 	// Verify the node binary exists after extraction.
 	if _, err := root.Stat(filepath.Join("bin", "node")); err != nil {
-		return fmt.Errorf("extraction completed but node binary not found at %s", nodeBin)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("extraction completed but node binary not found at %s", nodeBin)
+		}
+		return fmt.Errorf("failed to verify extracted node binary at %s: %w", nodeBin, err)
 	}
 
 	return nil
