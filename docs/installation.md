@@ -39,11 +39,11 @@ wget -qO- https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | 
 
 ## Building from Source
 
-Driftr is written in Go. You need Go 1.23 or later to build it.
+Driftr is written in Go. You need Go 1.26 or later to build it.
 
 ### Prerequisites
 
-- [Go](https://go.dev/dl/) 1.23+
+- [Go](https://go.dev/dl/) 1.26+
 - Git
 - macOS or Linux (Windows support is planned)
 

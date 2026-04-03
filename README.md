@@ -149,7 +149,7 @@ Shims in `~/.driftr/bin/` intercept calls to `node`, `npm`, `npx`, `pnpm`, `pnpx
 - macOS or Linux
 - `curl` or `wget` (for the install script)
 - Internet access (to download releases from nodejs.org, GitHub, and the npm registry)
-- Go 1.23+ (only if building from source)
+- Go 1.26+ (only if building from source)
 
 ## License
 
