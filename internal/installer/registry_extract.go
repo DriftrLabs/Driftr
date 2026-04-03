@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -29,6 +28,13 @@ func ExtractRegistryPackage(archivePath, destDir string) error {
 		return fmt.Errorf("failed to create destination dir: %w", err)
 	}
 
+	// Use os.Root to sandbox all file operations within destDir.
+	root, err := os.OpenRoot(destDir)
+	if err != nil {
+		return fmt.Errorf("failed to open root dir: %w", err)
+	}
+	defer root.Close()
+
 	tr := tar.NewReader(gz)
 	for {
 		hdr, err := tr.Next()
@@ -48,32 +54,8 @@ func ExtractRegistryPackage(archivePath, destDir string) error {
 			continue
 		}
 
-		// Sanitize: reject paths that escape the destination directory.
-		target := filepath.Join(destDir, name)
-		if !strings.HasPrefix(filepath.Clean(target), filepath.Clean(destDir)+string(filepath.Separator)) {
-			continue
-		}
-
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(target, 0o755); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", target, err)
-			}
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return fmt.Errorf("failed to create parent dir for %s: %w", target, err)
-			}
-
-			mode := hdr.FileInfo().Mode()
-			out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
-			if err != nil {
-				return fmt.Errorf("failed to create file %s: %w", target, err)
-			}
-			if _, err := io.Copy(out, tr); err != nil {
-				out.Close()
-				return fmt.Errorf("failed to write file %s: %w", target, err)
-			}
-			out.Close()
+		if err := extractToRoot(root, name, hdr, tr); err != nil {
+			return err
 		}
 	}
 

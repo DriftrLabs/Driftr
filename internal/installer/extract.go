@@ -12,6 +12,49 @@ import (
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
+// extractToRoot extracts a tar entry into an os.Root-sandboxed directory.
+// The Root enforces that no path can escape destDir, replacing manual prefix checks.
+func extractToRoot(root *os.Root, relPath string, hdr *tar.Header, tr *tar.Reader) error {
+	switch hdr.Typeflag {
+	case tar.TypeDir:
+		if err := root.MkdirAll(relPath, hdr.FileInfo().Mode().Perm()); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", relPath, err)
+		}
+
+	case tar.TypeReg:
+		if dir := filepath.Dir(relPath); dir != "." {
+			if err := root.MkdirAll(dir, 0o755); err != nil {
+				return fmt.Errorf("failed to create parent dir for %s: %w", relPath, err)
+			}
+		}
+		outFile, err := root.OpenFile(relPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, hdr.FileInfo().Mode().Perm())
+		if err != nil {
+			return fmt.Errorf("failed to create file %s: %w", relPath, err)
+		}
+		if _, err := io.Copy(outFile, tr); err != nil {
+			outFile.Close()
+			return fmt.Errorf("failed to write file %s: %w", relPath, err)
+		}
+		if err := outFile.Close(); err != nil {
+			return fmt.Errorf("failed to close file %s: %w", relPath, err)
+		}
+
+	case tar.TypeSymlink:
+		if dir := filepath.Dir(relPath); dir != "." {
+			if err := root.MkdirAll(dir, 0o755); err != nil {
+				return fmt.Errorf("failed to create parent dir for %s: %w", relPath, err)
+			}
+		}
+		if err := root.Remove(relPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("failed to remove existing path %s before creating symlink: %w", relPath, err)
+		}
+		if err := root.Symlink(hdr.Linkname, relPath); err != nil {
+			return fmt.Errorf("failed to create symlink %s: %w", relPath, err)
+		}
+	}
+	return nil
+}
+
 // Extract unpacks the downloaded archive into the tools directory.
 // The Node.js archive contains a top-level directory like "node-v24.0.0-darwin-arm64/".
 // We extract its contents into ~/.driftr/tools/node/<version>/.
@@ -40,6 +83,14 @@ func Extract(archivePath, version string, verbose bool) error {
 	if verbose {
 		fmt.Printf("  Extracting to: %s\n", destDir)
 	}
+
+	// Use os.Root to sandbox all file operations within destDir.
+	// The kernel enforces that no extracted path can escape this directory.
+	root, err := os.OpenRoot(destDir)
+	if err != nil {
+		return fmt.Errorf("failed to open root dir: %w", err)
+	}
+	defer root.Close()
 
 	f, err := os.Open(archivePath)
 	if err != nil {
@@ -78,47 +129,17 @@ func Extract(archivePath, version string, verbose bool) error {
 			continue
 		}
 
-		targetPath := filepath.Join(destDir, relPath)
-
-		// Security: prevent path traversal.
-		if !strings.HasPrefix(targetPath, destDir) {
-			continue
-		}
-
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			if err := os.MkdirAll(targetPath, os.FileMode(hdr.Mode)); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", targetPath, err)
-			}
-
-		case tar.TypeReg:
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
-				return fmt.Errorf("failed to create parent dir: %w", err)
-			}
-			outFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode))
-			if err != nil {
-				return fmt.Errorf("failed to create file %s: %w", targetPath, err)
-			}
-			if _, err := io.Copy(outFile, tr); err != nil {
-				outFile.Close()
-				return fmt.Errorf("failed to write file %s: %w", targetPath, err)
-			}
-			outFile.Close()
-
-		case tar.TypeSymlink:
-			if err := os.MkdirAll(filepath.Dir(targetPath), 0o755); err != nil {
-				return fmt.Errorf("failed to create parent dir: %w", err)
-			}
-			os.Remove(targetPath) // Remove existing symlink if any.
-			if err := os.Symlink(hdr.Linkname, targetPath); err != nil {
-				return fmt.Errorf("failed to create symlink %s: %w", targetPath, err)
-			}
+		if err := extractToRoot(root, relPath, hdr, tr); err != nil {
+			return err
 		}
 	}
 
 	// Verify the node binary exists after extraction.
-	if _, err := os.Stat(nodeBin); os.IsNotExist(err) {
-		return fmt.Errorf("extraction completed but node binary not found at %s", nodeBin)
+	if _, err := root.Stat(filepath.Join("bin", "node")); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("extraction completed but node binary not found at %s", nodeBin)
+		}
+		return fmt.Errorf("failed to verify extracted node binary at %s: %w", nodeBin, err)
 	}
 
 	return nil
