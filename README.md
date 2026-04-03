@@ -70,7 +70,7 @@ pnpm -v   # resolves automatically
 | `driftr which <tool>` | Show which binary would be executed and why |
 | `driftr run --node <ver> -- <cmd>` | Run a command under a specific Node.js version |
 | `driftr setup` | Initialize Driftr and generate shims |
-| `driftr update` | Update Driftr to the latest version |
+| `driftr self-update` | Update Driftr to the latest version |
 
 All commands support `-v` / `--verbose` for detailed output including resolver tracing and checksum details.
 
@@ -138,7 +138,7 @@ Shims in `~/.driftr/bin/` intercept calls to `node`, `npm`, `npx`, `pnpm`, `pnpx
 | Windows | No | No | Yes (rough) | Yes | Very basic |
 | Manages npm/pnpm/yarn | **Yes** | No | Partial | No | Yes |
 | Maintained | Yes | Yes | **No** | Yes | Yes |
-| Self-update | `driftr update` | `nvm` script | No | No | `mise self-update` |
+| Self-update | `driftr self-update` | `nvm` script | No | No | `mise self-update` |
 
 **When to choose Driftr**: You want a fast, minimal, shim-based manager for Node.js, pnpm, and yarn with a Volta-like experience -- pin versions to projects, and tools just work. You value simplicity and a small dependency footprint.
 

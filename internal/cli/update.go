@@ -10,7 +10,7 @@ import (
 
 func newUpdateCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "update",
+		Use:   "self-update",
 		Short: "Update driftr to the latest version",
 		Long:  "Check for a newer version of driftr and replace the current binary.",
 		Args:  cobra.NoArgs,
