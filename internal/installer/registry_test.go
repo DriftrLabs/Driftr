@@ -99,16 +99,16 @@ func TestVerifyIntegrity_UnsupportedAlgo(t *testing.T) {
 	}
 }
 
-func TestVersionGreater(t *testing.T) {
+func TestVersionCompare(t *testing.T) {
 	tests := []struct {
 		a, b string
-		want bool
+		want int // positive if a > b, negative if a < b, 0 if equal
 	}{
-		{"2.0.0", "1.0.0", true},
-		{"1.1.0", "1.0.0", true},
-		{"1.0.1", "1.0.0", true},
-		{"1.0.0", "1.0.0", false},
-		{"1.0.0", "2.0.0", false},
+		{"2.0.0", "1.0.0", 1},
+		{"1.1.0", "1.0.0", 1},
+		{"1.0.1", "1.0.0", 1},
+		{"1.0.0", "1.0.0", 0},
+		{"1.0.0", "2.0.0", -1},
 	}
 
 	for _, tt := range tests {
@@ -121,8 +121,8 @@ func TestVersionGreater(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Parse(%q) error: %v", tt.b, err)
 			}
-			if got := versionGreater(a, b); got != tt.want {
-				t.Errorf("versionGreater(%s, %s) = %v, want %v", tt.a, tt.b, got, tt.want)
+			if got := versionCompare(a, b); got != tt.want {
+				t.Errorf("versionCompare(%s, %s) = %v, want %v", tt.a, tt.b, got, tt.want)
 			}
 		})
 	}

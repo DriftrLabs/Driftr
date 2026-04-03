@@ -3,6 +3,7 @@ package installer
 import (
 	"archive/tar"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,7 +39,7 @@ func ExtractRegistryPackage(archivePath, destDir string) error {
 	tr := tar.NewReader(gz)
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -47,8 +48,8 @@ func ExtractRegistryPackage(archivePath, destDir string) error {
 
 		// Strip the "package/" prefix that all npm tarballs use.
 		name := hdr.Name
-		if i := strings.Index(name, "/"); i >= 0 {
-			name = name[i+1:]
+		if _, after, ok := strings.Cut(name, "/"); ok {
+			name = after
 		}
 		if name == "" {
 			continue

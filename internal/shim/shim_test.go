@@ -1,6 +1,7 @@
 package shim
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,7 +53,7 @@ func TestWriteShim_AllTools(t *testing.T) {
 		if err := writeShim(dir, tool, "/bin/driftr"); err != nil {
 			t.Fatalf("writeShim(%q) error: %v", tool, err)
 		}
-		if _, err := os.Stat(filepath.Join(dir, tool)); os.IsNotExist(err) {
+		if _, err := os.Stat(filepath.Join(dir, tool)); errors.Is(err, os.ErrNotExist) {
 			t.Errorf("shim for %q was not created", tool)
 		}
 	}

@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"cmp"
 	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
@@ -103,7 +104,7 @@ func ResolveRegistryLatest(pkg string, v version.Version) (string, error) {
 		if !v.Matches(rv) {
 			continue
 		}
-		if best == nil || versionGreater(rv, *best) {
+		if best == nil || versionCompare(rv, *best) > 0 {
 			rv := rv // copy
 			best = &rv
 		}
@@ -115,15 +116,15 @@ func ResolveRegistryLatest(pkg string, v version.Version) (string, error) {
 	return best.String(), nil
 }
 
-// versionGreater returns true if a > b in semver ordering.
-func versionGreater(a, b version.Version) bool {
-	if a.Major != b.Major {
-		return a.Major > b.Major
+// versionCompare returns a positive value if a > b, negative if a < b, zero if equal.
+func versionCompare(a, b version.Version) int {
+	if c := cmp.Compare(a.Major, b.Major); c != 0 {
+		return c
 	}
-	if a.Minor != b.Minor {
-		return a.Minor > b.Minor
+	if c := cmp.Compare(a.Minor, b.Minor); c != 0 {
+		return c
 	}
-	return a.Patch > b.Patch
+	return cmp.Compare(a.Patch, b.Patch)
 }
 
 // DownloadRegistryPackage downloads an npm package tarball to the cache directory.

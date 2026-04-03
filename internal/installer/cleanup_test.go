@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -19,7 +20,7 @@ func TestInstallCleanup_RemovesTmpFile(t *testing.T) {
 	cleanup.setTmpFile(tmpPath)
 	cleanup.run()
 
-	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(tmpPath); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("temp file should have been removed: %s", tmpPath)
 	}
 }
@@ -42,7 +43,7 @@ func TestInstallCleanup_RemovesVersionDir(t *testing.T) {
 	cleanup := &installCleanup{version: "99.0.0"}
 	cleanup.run()
 
-	if _, err := os.Stat(versionDir); !os.IsNotExist(err) {
+	if _, err := os.Stat(versionDir); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("version directory should have been removed: %s", versionDir)
 	}
 }
@@ -70,10 +71,10 @@ func TestInstallCleanup_RemovesBothTmpFileAndVersionDir(t *testing.T) {
 	cleanup.setVersion("99.0.0")
 	cleanup.run()
 
-	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(tmpPath); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("temp file should have been removed")
 	}
-	if _, err := os.Stat(versionDir); !os.IsNotExist(err) {
+	if _, err := os.Stat(versionDir); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("version directory should have been removed")
 	}
 }
@@ -93,7 +94,7 @@ func TestInstallCleanup_RunIdempotent(t *testing.T) {
 	cleanup.run()
 	cleanup.run()
 
-	if _, err := os.Stat(tmpPath); !os.IsNotExist(err) {
+	if _, err := os.Stat(tmpPath); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("temp file should have been removed")
 	}
 }
@@ -103,7 +104,7 @@ func TestInstallCleanup_ConcurrentAccess(t *testing.T) {
 
 	var wg sync.WaitGroup
 	// Hammer set/clear/run concurrently to test for races.
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		wg.Add(3)
 		go func() {
 			defer wg.Done()

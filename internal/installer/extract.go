@@ -3,6 +3,7 @@ package installer
 import (
 	"archive/tar"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -45,7 +46,7 @@ func extractToRoot(root *os.Root, relPath string, hdr *tar.Header, tr *tar.Reade
 				return fmt.Errorf("failed to create parent dir for %s: %w", relPath, err)
 			}
 		}
-		if err := root.Remove(relPath); err != nil && !os.IsNotExist(err) {
+		if err := root.Remove(relPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("failed to remove existing path %s before creating symlink: %w", relPath, err)
 		}
 		if err := root.Symlink(hdr.Linkname, relPath); err != nil {
@@ -111,7 +112,7 @@ func Extract(archivePath, version string, verbose bool) error {
 
 	for {
 		hdr, err := tr.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -136,7 +137,7 @@ func Extract(archivePath, version string, verbose bool) error {
 
 	// Verify the node binary exists after extraction.
 	if _, err := root.Stat(filepath.Join("bin", "node")); err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("extraction completed but node binary not found at %s", nodeBin)
 		}
 		return fmt.Errorf("failed to verify extracted node binary at %s: %w", nodeBin, err)

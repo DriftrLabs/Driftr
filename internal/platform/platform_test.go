@@ -1,6 +1,7 @@
 package platform
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -144,7 +145,7 @@ func TestEnsureToolDirs(t *testing.T) {
 		filepath.Join(home, ".driftr", "tools", "node"),
 		filepath.Join(home, ".driftr", "tools", "pnpm"),
 	} {
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
 			t.Errorf("expected directory %s to exist", dir)
 		}
 	}
