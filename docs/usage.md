@@ -38,6 +38,23 @@ driftr install node@22 -v
 - If checksum verification fails, the cached archive is deleted automatically
 - If extraction fails, the partial installation is cleaned up
 
+## driftr uninstall
+
+Remove a previously installed tool version.
+
+```bash
+driftr uninstall node@22.14.0
+driftr uninstall pnpm@9.15.0
+driftr uninstall yarn@1.22.22
+```
+
+Removes the version directory from `~/.driftr/tools/<tool>/<version>/`.
+
+**Notes:**
+
+- If the version is the current global default, a warning is printed
+- Cached archives in `~/.driftr/cache/` are not removed (they will be reused if you reinstall)
+
 ## driftr default
 
 Set the global default version for a tool.

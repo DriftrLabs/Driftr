@@ -41,6 +41,7 @@ func NewRootCmd() *cobra.Command {
 
 	root.AddCommand(
 		newInstallCmd(),
+		newUninstallCmd(),
 		newDefaultCmd(),
 		newPinCmd(),
 		newListCmd(),
