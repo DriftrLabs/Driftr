@@ -64,6 +64,7 @@ pnpm -v   # resolves automatically
 | Command | Description |
 |---------|-------------|
 | `driftr install <tool@version>` | Download and install a tool version (node, pnpm, yarn) |
+| `driftr uninstall <tool@version>` | Remove an installed tool version |
 | `driftr default <tool@version>` | Set the global default version for a tool |
 | `driftr pin <tool@version>` | Pin a version to the current project (`.driftr.toml` or `package.json`) |
 | `driftr list [tool]` | List installed versions (defaults to node) |

@@ -183,7 +183,6 @@ Group tests under numbered section headers to keep them organized.
 ### Good First Issues
 
 - Improve error messages with suggestions
-- Add `driftr uninstall <tool@version>` command
 - Add color output for `driftr list`
 - Add `driftr list --all` to show versions for all tools at once
 
