@@ -71,6 +71,8 @@ pnpm -v   # resolves automatically
 | `driftr which <tool>` | Show which binary would be executed and why |
 | `driftr run --node <ver> -- <cmd>` | Run a command under a specific Node.js version |
 | `driftr setup` | Initialize Driftr and generate shims |
+| `driftr cache clean` | Remove all cached downloads to free disk space |
+| `driftr cache dir` | Print the cache directory path |
 | `driftr self-update` | Update Driftr to the latest version |
 
 All commands support `-v` / `--verbose` for detailed output including resolver tracing and checksum details.
