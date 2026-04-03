@@ -53,14 +53,16 @@ func InstallPnpm(versionStr string, verbose bool) (string, error) {
 	}
 
 	// Verify integrity.
-	if rv.Dist.Integrity != "" {
-		if verbose {
-			fmt.Println("  Verifying integrity...")
-		}
-		if err := VerifyIntegrity(archivePath, rv.Dist.Integrity); err != nil {
-			os.Remove(archivePath)
-			return "", err
-		}
+	if rv.Dist.Integrity == "" {
+		os.Remove(archivePath)
+		return "", fmt.Errorf("registry metadata for pnpm %s is missing integrity data; refusing to install unverified package", resolvedVersion)
+	}
+	if verbose {
+		fmt.Println("  Verifying integrity...")
+	}
+	if err := VerifyIntegrity(archivePath, rv.Dist.Integrity); err != nil {
+		os.Remove(archivePath)
+		return "", err
 	}
 
 	// Extract to version directory.
@@ -78,9 +80,12 @@ func InstallPnpm(versionStr string, verbose bool) (string, error) {
 	}
 
 	// Verify the binary exists after extraction.
-	if _, err := os.Stat(binPath); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat(binPath); err != nil {
 		os.RemoveAll(versionDir)
-		return "", fmt.Errorf("pnpm binary not found after extraction at %s", binPath)
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("pnpm binary not found after extraction at %s", binPath)
+		}
+		return "", fmt.Errorf("failed to verify pnpm binary at %s: %w", binPath, err)
 	}
 
 	// Ensure the binary is executable.
