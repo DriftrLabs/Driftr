@@ -92,7 +92,12 @@ This writes the version in the new format and removes the old config (deletes `.
 
 ### Directory Walk Behavior
 
-When resolving a version, Driftr walks up from the current directory to the filesystem root. In each directory, it checks `.driftr.toml` first, then `package.json`:
+When resolving a version, Driftr walks up from the current directory to the filesystem root. In each directory, it checks config files in priority order:
+
+1. `.driftr.toml`
+2. `package.json` (driftr key)
+3. `.nvmrc` (node only)
+4. `.node-version` (node only)
 
 ```
 /home/user/my-project/packages/core/   <- cwd, no config
@@ -100,7 +105,9 @@ When resolving a version, Driftr walks up from the current directory to the file
 /home/user/my-project/                 <- .driftr.toml found! uses this
 ```
 
-If `.driftr.toml` and `package.json` both exist in the same directory, `.driftr.toml` takes priority.
+If multiple config files exist in the same directory, the priority order above applies. `.nvmrc` and `.node-version` are only used for Node.js version resolution — pnpm and yarn versions must be configured via `.driftr.toml` or `package.json`.
+
+**Note:** LTS aliases (`lts/*`, `lts/hydrogen`) in `.nvmrc` are not supported and will be skipped.
 
 This means:
 
@@ -163,6 +170,5 @@ driftr install node@22.14.0
 
 The configuration format is designed for extension. Future versions may add:
 
-- `.nvmrc` and `.node-version` file support as alternative resolution sources
 - pnpm and yarn pinning in `package.json` format (currently `.driftr.toml` only)
 - Mirror configuration for custom download sources

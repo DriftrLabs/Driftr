@@ -110,6 +110,8 @@ const (
 	SourceExplicit    Source = iota
 	SourceProject            // .driftr.toml
 	SourcePackageJSON        // package.json driftr key
+	SourceNvmrc              // .nvmrc
+	SourceNodeVersion        // .node-version
 	SourceGlobal
 )
 
@@ -121,6 +123,10 @@ func (s Source) String() string {
 		return "project config"
 	case SourcePackageJSON:
 		return "package.json (driftr)"
+	case SourceNvmrc:
+		return ".nvmrc"
+	case SourceNodeVersion:
+		return ".node-version"
 	case SourceGlobal:
 		return "global default"
 	default:
@@ -262,6 +268,33 @@ func resolveFromProject(tool, dir string, verbose bool) (*Resolution, error) {
 		if pkg != nil {
 			if ver := pkg.Driftr.GetTool(tool); ver != "" {
 				return resolveProjectVersion(tool, ver, current, SourcePackageJSON)
+			}
+		}
+
+		// Check .nvmrc and .node-version (node only).
+		if tool == "node" {
+			nvmrcPath := filepath.Join(current, ".nvmrc")
+			if verbose {
+				fmt.Printf("  [resolve]   Checking: %s\n", nvmrcPath)
+			}
+			ver, err := config.LoadNvmrc(current)
+			if err != nil {
+				return nil, err
+			}
+			if ver != "" {
+				return resolveProjectVersion(tool, ver, current, SourceNvmrc)
+			}
+
+			nodeVersionPath := filepath.Join(current, ".node-version")
+			if verbose {
+				fmt.Printf("  [resolve]   Checking: %s\n", nodeVersionPath)
+			}
+			ver, err = config.LoadNodeVersion(current)
+			if err != nil {
+				return nil, err
+			}
+			if ver != "" {
+				return resolveProjectVersion(tool, ver, current, SourceNodeVersion)
 			}
 		}
 

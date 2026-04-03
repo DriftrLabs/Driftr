@@ -41,7 +41,7 @@ internal/
 
   installer/                tool installation pipelines
     node.go                 Node.js: resolve → download → verify SHA256 → extract
-    pnpm.go                 pnpm: resolve → download standalone binary from GitHub
+    pnpm.go                 pnpm: resolve → download from npm registry → verify SRI → extract
     yarn.go                 yarn: resolve → download from npm registry → verify SRI → extract
     registry.go             npm registry client: version resolution, tarball download, SRI verification
     registry_extract.go     tarball extraction for npm registry packages
@@ -121,7 +121,7 @@ Partial versions (e.g. `node@22`, `pnpm@9`) are resolved to the latest matching 
 | Tool    | Method                                            |
 |---------|---------------------------------------------------|
 | Node.js | SHA256 against `SHASUMS256.txt` from nodejs.org   |
-| pnpm    | No verification (standalone binary from GitHub)   |
+| pnpm    | SHA-512 SRI integrity from npm registry metadata  |
 | yarn    | SHA-512 SRI integrity from npm registry metadata  |
 
 On failure, the cached archive is deleted so the next attempt re-downloads.
