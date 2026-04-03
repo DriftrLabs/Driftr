@@ -151,8 +151,8 @@ var toolBinaryMap = map[string]ToolEntry{
 	"node": {Parent: "node", Binary: "node"},
 	"npm":  {Parent: "node", Binary: "npm"},
 	"npx":  {Parent: "node", Binary: "npx"},
-	"pnpm": {Parent: "pnpm", Binary: "pnpm"},
-	"pnpx": {Parent: "pnpm", Binary: "pnpx"},
+	"pnpm": {Parent: "pnpm", Binary: "pnpm.cjs", NeedsNode: true},
+	"pnpx": {Parent: "pnpm", Binary: "pnpx.cjs", NeedsNode: true},
 	"yarn": {Parent: "yarn", Binary: "yarn.js", NeedsNode: true},
 }
 

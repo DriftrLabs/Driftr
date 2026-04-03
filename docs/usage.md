@@ -29,7 +29,7 @@ driftr install node@22 -v
 | Tool    | Source                                 | Verification                  |
 |---------|----------------------------------------|-------------------------------|
 | Node.js | nodejs.org archives                    | SHA256 against SHASUMS256.txt |
-| pnpm    | Standalone binary from GitHub releases | --                            |
+| pnpm    | npm registry tarball                   | SHA-512 SRI integrity         |
 | yarn    | npm registry tarball                   | SHA-512 SRI integrity         |
 
 **Notes:**

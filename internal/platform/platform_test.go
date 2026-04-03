@@ -18,8 +18,8 @@ func TestToolBinary_KnownTools(t *testing.T) {
 		{"node", "22.14.0", "tools/node/22.14.0/bin/node"},
 		{"npm", "22.14.0", "tools/node/22.14.0/bin/npm"},
 		{"npx", "22.14.0", "tools/node/22.14.0/bin/npx"},
-		{"pnpm", "9.15.0", "tools/pnpm/9.15.0/bin/pnpm"},
-		{"pnpx", "9.15.0", "tools/pnpm/9.15.0/bin/pnpx"},
+		{"pnpm", "9.15.0", "tools/pnpm/9.15.0/bin/pnpm.cjs"},
+		{"pnpx", "9.15.0", "tools/pnpm/9.15.0/bin/pnpx.cjs"},
 		{"yarn", "1.22.22", "tools/yarn/1.22.22/bin/yarn.js"},
 	}
 
@@ -52,7 +52,7 @@ func TestLookupTool(t *testing.T) {
 	}{
 		{"node", true, false, "node"},
 		{"npm", true, false, "node"},
-		{"pnpm", true, false, "pnpm"},
+		{"pnpm", true, true, "pnpm"},
 		{"yarn", true, true, "yarn"},
 		{"unknown", false, false, ""},
 	}
