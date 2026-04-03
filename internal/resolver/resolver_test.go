@@ -308,6 +308,8 @@ func TestSourceString(t *testing.T) {
 		{SourceExplicit, "explicit override"},
 		{SourceProject, "project config"},
 		{SourcePackageJSON, "package.json (driftr)"},
+		{SourceNvmrc, ".nvmrc"},
+		{SourceNodeVersion, ".node-version"},
 		{SourceGlobal, "global default"},
 		{Source(99), "unknown"},
 	}
@@ -316,5 +318,101 @@ func TestSourceString(t *testing.T) {
 		if got := tt.source.String(); got != tt.want {
 			t.Errorf("Source(%d).String() = %q, want %q", tt.source, got, tt.want)
 		}
+	}
+}
+
+func TestResolveFromProject_Nvmrc(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	setupFakeInstall(t, home, "node", "22.14.0")
+
+	projectDir := t.TempDir()
+	os.WriteFile(filepath.Join(projectDir, ".nvmrc"), []byte("22.14.0\n"), 0o644)
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(projectDir)
+
+	res, err := ResolveTool("node", "", false)
+	if err != nil {
+		t.Fatalf("ResolveTool() error: %v", err)
+	}
+	if res.Version != "22.14.0" {
+		t.Errorf("version = %q, want %q", res.Version, "22.14.0")
+	}
+	if res.Source != SourceNvmrc {
+		t.Errorf("source = %v, want %v", res.Source, SourceNvmrc)
+	}
+}
+
+func TestResolveFromProject_NodeVersion(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	setupFakeInstall(t, home, "node", "22.14.0")
+
+	projectDir := t.TempDir()
+	os.WriteFile(filepath.Join(projectDir, ".node-version"), []byte("22.14.0\n"), 0o644)
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(projectDir)
+
+	res, err := ResolveTool("node", "", false)
+	if err != nil {
+		t.Fatalf("ResolveTool() error: %v", err)
+	}
+	if res.Version != "22.14.0" {
+		t.Errorf("version = %q, want %q", res.Version, "22.14.0")
+	}
+	if res.Source != SourceNodeVersion {
+		t.Errorf("source = %v, want %v", res.Source, SourceNodeVersion)
+	}
+}
+
+func TestResolveFromProject_NvmrcPriority(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	setupFakeInstall(t, home, "node", "20.0.0")
+	setupFakeInstall(t, home, "node", "22.14.0")
+
+	// .nvmrc should lose to .driftr.toml
+	projectDir := t.TempDir()
+	cfg := &config.ProjectConfig{}
+	cfg.Tools.SetTool("node", "20.0.0")
+	config.SaveProject(projectDir, cfg)
+	os.WriteFile(filepath.Join(projectDir, ".nvmrc"), []byte("22.14.0\n"), 0o644)
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(projectDir)
+
+	res, err := ResolveTool("node", "", false)
+	if err != nil {
+		t.Fatalf("ResolveTool() error: %v", err)
+	}
+	if res.Version != "20.0.0" {
+		t.Errorf("version = %q, want %q (.driftr.toml should beat .nvmrc)", res.Version, "20.0.0")
+	}
+	if res.Source != SourceProject {
+		t.Errorf("source = %v, want %v", res.Source, SourceProject)
+	}
+}
+
+func TestResolveFromProject_NvmrcIgnoredForNonNode(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	// Create .nvmrc but resolve pnpm — should not match.
+	projectDir := t.TempDir()
+	os.WriteFile(filepath.Join(projectDir, ".nvmrc"), []byte("22.14.0\n"), 0o644)
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(projectDir)
+
+	// pnpm resolution should fall through to global (and fail with no global set).
+	_, err := ResolveTool("pnpm", "", false)
+	if err == nil {
+		t.Fatal("expected error for pnpm with only .nvmrc, got nil")
 	}
 }
