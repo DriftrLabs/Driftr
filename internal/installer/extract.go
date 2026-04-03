@@ -43,7 +43,7 @@ func extractToRoot(root *os.Root, relPath string, hdr *tar.Header, tr *tar.Reade
 				return fmt.Errorf("failed to create parent dir for %s: %w", relPath, err)
 			}
 		}
-		root.Remove(relPath) // Remove existing symlink if any.
+		_ = root.Remove(relPath) // Remove existing symlink if any.
 		if err := root.Symlink(hdr.Linkname, relPath); err != nil {
 			return fmt.Errorf("failed to create symlink %s: %w", relPath, err)
 		}
