@@ -108,8 +108,11 @@ func requireToolBinaryExists(tool, ver, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := os.Stat(binPath); errors.Is(err, os.ErrNotExist) {
-		return "", &NotInstalledError{Tool: tool, Version: ver, Context: context}
+	if _, err := os.Stat(binPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", &NotInstalledError{Tool: tool, Version: ver, Context: context}
+		}
+		return "", fmt.Errorf("failed to check %s %s binary: %w", tool, ver, err)
 	}
 	return binPath, nil
 }

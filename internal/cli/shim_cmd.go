@@ -69,7 +69,7 @@ func handleNotInstalled(err error, tool string) (*resolver.ResolvedBinary, error
 	}
 
 	if !promptInstall(notInstalled) {
-		return nil, fmt.Errorf("%s %s is not installed", notInstalled.Tool, notInstalled.Version)
+		os.Exit(1)
 	}
 
 	return autoInstall(notInstalled, tool)
