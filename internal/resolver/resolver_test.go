@@ -1,8 +1,11 @@
 package resolver
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/DriftrLabs/driftr/internal/config"
@@ -318,6 +321,58 @@ func TestSourceString(t *testing.T) {
 		if got := tt.source.String(); got != tt.want {
 			t.Errorf("Source(%d).String() = %q, want %q", tt.source, got, tt.want)
 		}
+	}
+}
+
+func TestNotInstalledError(t *testing.T) {
+	e := &NotInstalledError{Tool: "node", Version: "24.1.0", Context: "pinned in /home/user/project"}
+	msg := e.Error()
+	if !strings.Contains(msg, "node 24.1.0") {
+		t.Errorf("error should contain tool and version, got: %s", msg)
+	}
+	if !strings.Contains(msg, "pinned in /home/user/project") {
+		t.Errorf("error should contain context, got: %s", msg)
+	}
+	if !strings.Contains(msg, "driftr install node@24.1.0") {
+		t.Errorf("error should contain install hint, got: %s", msg)
+	}
+
+	// Without context.
+	e2 := &NotInstalledError{Tool: "pnpm", Version: "9.0.0"}
+	msg2 := e2.Error()
+	if strings.Contains(msg2, "(") {
+		t.Errorf("error without context should not contain parens, got: %s", msg2)
+	}
+}
+
+func TestNotInstalledError_ErrorsAs(t *testing.T) {
+	orig := &NotInstalledError{Tool: "node", Version: "22.0.0"}
+	wrapped := fmt.Errorf("resolution failed: %w", orig)
+
+	var target *NotInstalledError
+	if !errors.As(wrapped, &target) {
+		t.Fatal("errors.As should unwrap NotInstalledError from wrapped error")
+	}
+	if target.Tool != "node" || target.Version != "22.0.0" {
+		t.Errorf("unwrapped error has wrong fields: %+v", target)
+	}
+}
+
+func TestRequireToolBinaryExists_NotInstalled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	_, err := requireToolBinaryExists("node", "99.99.99", "global default")
+	if err == nil {
+		t.Fatal("expected error for non-existent version")
+	}
+
+	var notInstalled *NotInstalledError
+	if !errors.As(err, &notInstalled) {
+		t.Fatalf("expected NotInstalledError, got %T: %v", err, err)
+	}
+	if notInstalled.Tool != "node" || notInstalled.Version != "99.99.99" || notInstalled.Context != "global default" {
+		t.Errorf("unexpected fields: %+v", notInstalled)
 	}
 }
 

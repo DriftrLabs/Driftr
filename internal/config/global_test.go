@@ -39,6 +39,33 @@ func TestSaveAndLoadGlobal(t *testing.T) {
 	}
 }
 
+func TestSaveAndLoadGlobal_AutoInstall(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	if err := platform.EnsureDirs(); err != nil {
+		t.Fatalf("EnsureDirs() error: %v", err)
+	}
+
+	cfg := &GlobalConfig{
+		Default:     DefaultConfig{Node: "22.14.0"},
+		AutoInstall: true,
+	}
+	if err := SaveGlobal(cfg); err != nil {
+		t.Fatalf("SaveGlobal() error: %v", err)
+	}
+
+	loaded, err := LoadGlobal()
+	if err != nil {
+		t.Fatalf("LoadGlobal() error: %v", err)
+	}
+	if !loaded.AutoInstall {
+		t.Error("AutoInstall should be true after round-trip")
+	}
+	if loaded.Default.Node != "22.14.0" {
+		t.Errorf("Default.Node = %q, want %q", loaded.Default.Node, "22.14.0")
+	}
+}
+
 func TestSaveGlobal_OverwritesExisting(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
