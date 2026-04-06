@@ -66,7 +66,9 @@ pnpm = "9.15.0"
 {
   "name": "my-project",
   "driftr": {
-    "node": "22.14.0"
+    "node": "22.14.0",
+    "pnpm": "9.15.0",
+    "yarn": "1.22.22"
   }
 }
 ```
@@ -74,10 +76,10 @@ pnpm = "9.15.0"
 | Key            | Type   | Description                              |
 |----------------|--------|------------------------------------------|
 | `driftr.node`  | string | Pinned Node.js version for this project  |
+| `driftr.pnpm`  | string | Pinned pnpm version for this project     |
+| `driftr.yarn`  | string | Pinned yarn version for this project     |
 
 This format is useful when you want to keep all project tooling config in `package.json` without an extra dotfile.
-
-**Note:** The `package.json` format currently only supports `node`. For pnpm and yarn pinning, use `.driftr.toml`.
 
 **Note:** `package.json` must already exist — Driftr will not create it. Run `npm init` first if needed.
 
@@ -170,5 +172,4 @@ driftr install node@22.14.0
 
 The configuration format is designed for extension. Future versions may add:
 
-- pnpm and yarn pinning in `package.json` format (currently `.driftr.toml` only)
 - Mirror configuration for custom download sources
