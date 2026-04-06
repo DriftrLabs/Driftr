@@ -57,33 +57,43 @@ func handleNotInstalled(err error, tool string) (*resolver.ResolvedBinary, error
 		return nil, err
 	}
 
-	if !shouldAutoInstall(notInstalled) {
+	// Auto-install if configured.
+	cfg, cfgErr := config.LoadGlobal()
+	if cfgErr == nil && cfg.AutoInstall {
+		return autoInstall(notInstalled, tool)
+	}
+
+	// Prompt only in interactive terminals.
+	if !ioutil.IsTerminal(os.Stdin) {
+		return nil, err
+	}
+
+	if !promptInstall(notInstalled) {
 		return nil, fmt.Errorf("%s %s is not installed", notInstalled.Tool, notInstalled.Version)
 	}
 
-	fmt.Fprintf(os.Stderr, "Installing %s@%s...\n", notInstalled.Tool, notInstalled.Version)
-	if _, installErr := installTool(notInstalled.Tool, notInstalled.Version, false); installErr != nil {
-		return nil, fmt.Errorf("auto-install failed: %w", installErr)
+	return autoInstall(notInstalled, tool)
+}
+
+func autoInstall(e *resolver.NotInstalledError, tool string) (*resolver.ResolvedBinary, error) {
+	fmt.Fprintf(os.Stderr, "Installing %s@%s...\n", e.Tool, e.Version)
+	if _, err := installTool(e.Tool, e.Version, false); err != nil {
+		return nil, fmt.Errorf("auto-install failed: %w", err)
 	}
-	fmt.Fprintf(os.Stderr, "Installed %s %s\n", notInstalled.Tool, notInstalled.Version)
+	fmt.Fprintf(os.Stderr, "Installed %s %s\n", e.Tool, e.Version)
 
 	// Retry resolution after install.
 	return resolver.ResolveBinaryFull(tool, "")
 }
 
-// shouldAutoInstall decides whether to install a missing version.
-// Returns true if auto_install is enabled in config, or the user confirms at an interactive prompt.
-func shouldAutoInstall(e *resolver.NotInstalledError) bool {
-	cfg, err := config.LoadGlobal()
-	if err == nil && cfg.AutoInstall {
-		return true
+// promptInstall asks the user whether to install a missing version.
+func promptInstall(e *resolver.NotInstalledError) bool {
+	msg := fmt.Sprintf("%s %s is not installed", e.Tool, e.Version)
+	if e.Context != "" {
+		msg = fmt.Sprintf("%s %s (%s) is not installed", e.Tool, e.Version, e.Context)
 	}
+	fmt.Fprintf(os.Stderr, "%s\nInstall now? [Y/n] ", msg)
 
-	if !ioutil.IsTerminal(os.Stdin) {
-		return false
-	}
-
-	fmt.Fprintf(os.Stderr, "%s\nInstall now? [Y/n] ", e.Error())
 	reader := bufio.NewReader(os.Stdin)
 	answer, err := reader.ReadString('\n')
 	if err != nil {
