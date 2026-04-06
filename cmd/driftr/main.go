@@ -28,6 +28,7 @@ func main() {
 				fmt.Fprintf(os.Stderr, "driftr: %s\n", err)
 				os.Exit(1)
 			}
+			return
 		}
 		if err := process.Exec(rb.ToolPath, os.Args[3:]); err != nil {
 			fmt.Fprintf(os.Stderr, "driftr: %s\n", err)
