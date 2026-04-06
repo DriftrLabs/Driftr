@@ -14,6 +14,7 @@ import (
 // GlobalConfig represents ~/.driftr/config/config.toml
 type GlobalConfig struct {
 	Default DefaultConfig `toml:"default"`
+	AutoInstall bool      `toml:"auto_install,omitempty"` // install missing versions without prompting
 }
 
 // DefaultConfig holds the default tool versions.

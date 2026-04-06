@@ -88,6 +88,20 @@ func ListToolVersions(tool string) ([]string, error) {
 	return platform.ListToolVersions(tool)
 }
 
+// NotInstalledError is returned when a resolved tool version is not installed locally.
+type NotInstalledError struct {
+	Tool    string
+	Version string
+	Context string // e.g. "pinned in /home/user/project" or "global default"
+}
+
+func (e *NotInstalledError) Error() string {
+	if e.Context != "" {
+		return fmt.Sprintf("%s %s (%s) is not installed. Run `driftr install %s@%s`", e.Tool, e.Version, e.Context, e.Tool, e.Version)
+	}
+	return fmt.Sprintf("%s %s is not installed. Run `driftr install %s@%s`", e.Tool, e.Version, e.Tool, e.Version)
+}
+
 // requireToolBinaryExists checks that the binary for the given tool and version is installed.
 func requireToolBinaryExists(tool, ver, context string) (string, error) {
 	binPath, err := platform.ToolBinary(tool, ver)
@@ -95,10 +109,7 @@ func requireToolBinaryExists(tool, ver, context string) (string, error) {
 		return "", err
 	}
 	if _, err := os.Stat(binPath); errors.Is(err, os.ErrNotExist) {
-		if context != "" {
-			return "", fmt.Errorf("%s %s (%s) is not installed. Run `driftr install %s@%s`", tool, ver, context, tool, ver)
-		}
-		return "", fmt.Errorf("%s %s is not installed. Run `driftr install %s@%s`", tool, ver, tool, ver)
+		return "", &NotInstalledError{Tool: tool, Version: ver, Context: context}
 	}
 	return binPath, nil
 }

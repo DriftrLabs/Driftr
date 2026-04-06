@@ -11,6 +11,8 @@ This file stores your global default tool versions. It is created and managed by
 ### Format
 
 ```toml
+auto_install = true  # install missing versions without prompting
+
 [default]
 node = "22.14.0"
 
@@ -21,11 +23,12 @@ yarn = "1.22.22"
 
 ### Fields
 
-| Section           | Key    | Type   | Description                     |
-|-------------------|--------|--------|---------------------------------|
-| `[default]`       | `node` | string | Global default Node.js version  |
-| `[default.tools]` | `pnpm` | string | Global default pnpm version     |
-| `[default.tools]` | `yarn` | string | Global default yarn version     |
+| Section           | Key            | Type   | Description                                             |
+|-------------------|----------------|--------|---------------------------------------------------------|
+| (top-level)       | `auto_install` | bool   | Automatically install missing versions (default: false) |
+| `[default]`       | `node`         | string | Global default Node.js version                          |
+| `[default.tools]` | `pnpm`         | string | Global default pnpm version                             |
+| `[default.tools]` | `yarn`         | string | Global default yarn version                             |
 
 ### Example
 
