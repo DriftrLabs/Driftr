@@ -26,8 +26,8 @@ func TestLoadPackageJSON_DriftrNode(t *testing.T) {
 	if pkg == nil {
 		t.Fatal("expected non-nil result")
 	}
-	if pkg.Driftr.Node != "20.11.0" {
-		t.Errorf("got %q, want %q", pkg.Driftr.Node, "20.11.0")
+	if pkg.Driftr.GetTool("node") != "20.11.0" {
+		t.Errorf("got %q, want %q", pkg.Driftr.GetTool("node"), "20.11.0")
 	}
 }
 
@@ -102,8 +102,8 @@ func TestSavePackageJSON_AddsKey(t *testing.T) {
 	if err := json.Unmarshal(driftrRaw, &dc); err != nil {
 		t.Fatalf("failed to unmarshal driftr config: %v", err)
 	}
-	if dc.Node != "22.14.0" {
-		t.Errorf("got %q, want %q", dc.Node, "22.14.0")
+	if dc.GetTool("node") != "22.14.0" {
+		t.Errorf("got %q, want %q", dc.GetTool("node"), "22.14.0")
 	}
 
 	// Verify existing keys are preserved.
@@ -127,8 +127,8 @@ func TestSavePackageJSON_UpdatesExisting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if pkg.Driftr.Node != "22.14.0" {
-		t.Errorf("got %q, want %q", pkg.Driftr.Node, "22.14.0")
+	if pkg.Driftr.GetTool("node") != "22.14.0" {
+		t.Errorf("got %q, want %q", pkg.Driftr.GetTool("node"), "22.14.0")
 	}
 }
 
@@ -264,6 +264,108 @@ func TestRemoveDriftrFromPackageJSON_PreservesKeyOrder(t *testing.T) {
 
 	if nameIdx > versionIdx || versionIdx > scriptsIdx {
 		t.Errorf("key order not preserved, want name < version < scripts:\n%s", data)
+	}
+}
+
+func TestLoadPackageJSON_PnpmAndYarn(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "myapp", "driftr": {"node": "22.14.0", "pnpm": "9.15.0", "yarn": "1.22.22"}}`)
+
+	pkg, err := LoadPackageJSON(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pkg == nil {
+		t.Fatal("expected non-nil result")
+	}
+	if pkg.Driftr.GetTool("node") != "22.14.0" {
+		t.Errorf("node = %q, want %q", pkg.Driftr.GetTool("node"), "22.14.0")
+	}
+	if pkg.Driftr.GetTool("pnpm") != "9.15.0" {
+		t.Errorf("pnpm = %q, want %q", pkg.Driftr.GetTool("pnpm"), "9.15.0")
+	}
+	if pkg.Driftr.GetTool("yarn") != "1.22.22" {
+		t.Errorf("yarn = %q, want %q", pkg.Driftr.GetTool("yarn"), "1.22.22")
+	}
+}
+
+func TestLoadPackageJSON_PnpmOnly(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "myapp", "driftr": {"pnpm": "9.15.0"}}`)
+
+	pkg, err := LoadPackageJSON(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pkg == nil {
+		t.Fatal("expected non-nil result for pnpm-only config")
+	}
+	if pkg.Driftr.GetTool("pnpm") != "9.15.0" {
+		t.Errorf("pnpm = %q, want %q", pkg.Driftr.GetTool("pnpm"), "9.15.0")
+	}
+	if pkg.Driftr.GetTool("node") != "" {
+		t.Errorf("node should be empty, got %q", pkg.Driftr.GetTool("node"))
+	}
+}
+
+func TestSavePackageJSONTool_Pnpm(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "myapp", "driftr": {"node": "22.14.0"}}`)
+
+	if err := SavePackageJSONTool(dir, "pnpm", "9.15.0"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	pkg, err := LoadPackageJSON(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pkg.Driftr.GetTool("node") != "22.14.0" {
+		t.Errorf("node should be preserved, got %q", pkg.Driftr.GetTool("node"))
+	}
+	if pkg.Driftr.GetTool("pnpm") != "9.15.0" {
+		t.Errorf("pnpm = %q, want %q", pkg.Driftr.GetTool("pnpm"), "9.15.0")
+	}
+}
+
+func TestSavePackageJSONTool_Yarn(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "myapp"}`)
+
+	if err := SavePackageJSONTool(dir, "yarn", "1.22.22"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	pkg, err := LoadPackageJSON(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pkg.Driftr.GetTool("yarn") != "1.22.22" {
+		t.Errorf("yarn = %q, want %q", pkg.Driftr.GetTool("yarn"), "1.22.22")
+	}
+}
+
+func TestDriftrConfig_SetAndGet(t *testing.T) {
+	var dc DriftrConfig
+	dc.SetTool("node", "22")
+	dc.SetTool("pnpm", "9")
+	dc.SetTool("yarn", "1")
+
+	if dc.GetTool("node") != "22" {
+		t.Errorf("node = %q, want %q", dc.GetTool("node"), "22")
+	}
+	if dc.GetTool("pnpm") != "9" {
+		t.Errorf("pnpm = %q, want %q", dc.GetTool("pnpm"), "9")
+	}
+	if dc.GetTool("yarn") != "1" {
+		t.Errorf("yarn = %q, want %q", dc.GetTool("yarn"), "1")
+	}
+}
+
+func TestDriftrConfig_GetTool_Unknown(t *testing.T) {
+	dc := DriftrConfig{"node": "22", "pnpm": "9", "yarn": "1"}
+	if got := dc.GetTool("bun"); got != "" {
+		t.Errorf("GetTool(\"bun\") = %q, want empty string", got)
 	}
 }
 

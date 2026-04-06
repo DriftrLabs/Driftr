@@ -15,24 +15,30 @@ type PackageJSON struct {
 }
 
 // DriftrConfig holds the Driftr tool pinning from package.json.
-// Supports both the legacy `"node"` field and additional tools.
-type DriftrConfig struct {
-	Node string `json:"node,omitempty"`
-}
+// Serialized as a flat JSON map: {"node": "22.14.0", "pnpm": "9.15.0"}
+type DriftrConfig map[string]string
 
 // GetTool returns the pinned version for a tool from package.json.
-func (dc *DriftrConfig) GetTool(tool string) string {
-	if tool == "node" {
-		return dc.Node
+func (dc DriftrConfig) GetTool(tool string) string {
+	return dc[tool]
+}
+
+// hasVersions returns true if at least one tool has a non-empty version.
+func (dc DriftrConfig) hasVersions() bool {
+	for _, v := range dc {
+		if v != "" {
+			return true
+		}
 	}
-	return ""
+	return false
 }
 
 // SetTool sets the pinned version for a tool.
 func (dc *DriftrConfig) SetTool(tool, version string) {
-	if tool == "node" {
-		dc.Node = version
+	if *dc == nil {
+		*dc = make(DriftrConfig)
 	}
+	(*dc)[tool] = version
 }
 
 // LoadPackageJSON reads driftr tool versions from package.json in the given directory.
@@ -54,7 +60,7 @@ func LoadPackageJSON(dir string) (*PackageJSON, error) {
 	}
 
 	// Return nil if no tool versions are configured.
-	if pkg.Driftr.Node == "" {
+	if !pkg.Driftr.hasVersions() {
 		return nil, nil
 	}
 
