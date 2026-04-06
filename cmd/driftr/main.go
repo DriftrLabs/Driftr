@@ -14,12 +14,23 @@ func main() {
 	// Shim scripts call "driftr shim <tool> [args...]".
 	if len(os.Args) >= 3 && os.Args[1] == "shim" {
 		tool := os.Args[2]
-		binPath, err := resolver.ResolveBinary(tool, "")
+		rb, err := resolver.ResolveBinaryFull(tool, "")
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "driftr: %s\n", err)
-			os.Exit(1)
+			rb, err = cli.HandleShimError(err, tool)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "driftr: %s\n", err)
+				os.Exit(1)
+			}
 		}
-		if err := process.Exec(binPath, os.Args[3:]); err != nil {
+		if rb.NodePath != "" {
+			nodeArgs := append([]string{rb.ToolPath}, os.Args[3:]...)
+			if err := process.Exec(rb.NodePath, nodeArgs); err != nil {
+				fmt.Fprintf(os.Stderr, "driftr: %s\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+		if err := process.Exec(rb.ToolPath, os.Args[3:]); err != nil {
 			fmt.Fprintf(os.Stderr, "driftr: %s\n", err)
 			os.Exit(1)
 		}

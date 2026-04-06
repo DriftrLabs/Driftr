@@ -31,7 +31,7 @@ func newShimCmd() *cobra.Command {
 
 			rb, err := resolver.ResolveBinaryFull(tool, "")
 			if err != nil {
-				rb, err = handleNotInstalled(err, tool)
+				rb, err = HandleShimError(err, tool)
 				if err != nil {
 					return fmt.Errorf("error: %w", err)
 				}
@@ -49,9 +49,10 @@ func newShimCmd() *cobra.Command {
 	}
 }
 
-// handleNotInstalled checks if the error is a NotInstalledError and offers to install.
+// HandleShimError checks if the error is a NotInstalledError and offers to install.
 // Returns the resolved binary on successful install, or the original error.
-func handleNotInstalled(err error, tool string) (*resolver.ResolvedBinary, error) {
+// Called from the fast path in main.go and from the cobra shim command.
+func HandleShimError(err error, tool string) (*resolver.ResolvedBinary, error) {
 	var notInstalled *resolver.NotInstalledError
 	if !errors.As(err, &notInstalled) {
 		return nil, err
