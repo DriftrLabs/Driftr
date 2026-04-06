@@ -11,12 +11,16 @@ import (
 
 	"github.com/DriftrLabs/driftr/internal/config"
 	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/DriftrLabs/driftr/internal/shim"
 )
 
-var shimTools = []string{"node", "npm", "npx", "pnpm", "pnpx", "yarn"}
+// versionedTools are tools that have independently installed versions.
+var versionedTools = []string{"node", "pnpm", "yarn"}
 
 // conflicting node version managers to detect on PATH.
-var conflictingManagers = []string{"nvm", "fnm", "volta", "n"}
+var conflictingBinaries = []string{"fnm", "volta", "n"}
+
+const shimExecPrefix = `exec "`
 
 func newDoctorCmd() *cobra.Command {
 	return &cobra.Command{
@@ -24,15 +28,26 @@ func newDoctorCmd() *cobra.Command {
 		Short: "Check your driftr installation for problems",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			binDir, _ := platform.BinDir()
+			cfg, cfgErr := config.LoadGlobal()
+
+			toolVersions := make(map[string][]string)
+			for _, tool := range versionedTools {
+				versions, err := platform.ListToolVersions(tool)
+				if err == nil {
+					toolVersions[tool] = versions
+				}
+			}
+
 			issues := 0
-			issues += checkPath()
-			issues += checkShims()
-			issues += checkShimBinaryPath()
-			issues += checkGlobalDefault()
-			issues += checkDefaultsInstalled()
-			issues += checkConflictingManagers()
-			issues += checkInstalledVersions()
-			issues += checkNeedsNode()
+			issues += checkPath(binDir)
+			issues += checkShims(binDir)
+			issues += checkShimBinaryPath(binDir)
+			issues += checkGlobalDefault(cfg, cfgErr)
+			issues += checkDefaultsInstalled(cfg)
+			issues += checkConflictingManagers(binDir)
+			issues += checkInstalledVersions(toolVersions)
+			issues += checkNeedsNode(toolVersions)
 
 			fmt.Println()
 			if issues == 0 {
@@ -53,15 +68,13 @@ func warn(msg string) {
 	fmt.Printf("  !!  %s\n", msg)
 }
 
-func checkPath() int {
-	binDir, err := platform.BinDir()
-	if err != nil {
+func checkPath(binDir string) int {
+	if binDir == "" {
 		warn("Cannot determine bin directory")
 		return 1
 	}
 
-	pathDirs := filepath.SplitList(os.Getenv("PATH"))
-	for _, dir := range pathDirs {
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
 		if dir == binDir {
 			pass(binDir + " is on PATH")
 			return 0
@@ -72,15 +85,13 @@ func checkPath() int {
 	return 1
 }
 
-func checkShims() int {
-	binDir, err := platform.BinDir()
-	if err != nil {
-		warn("Cannot determine bin directory")
-		return 1
+func checkShims(binDir string) int {
+	if binDir == "" {
+		return 0
 	}
 
 	missing := 0
-	for _, tool := range shimTools {
+	for _, tool := range shim.ShimTools {
 		shimPath := filepath.Join(binDir, tool)
 		info, err := os.Stat(shimPath)
 		if err != nil {
@@ -95,14 +106,13 @@ func checkShims() int {
 	}
 
 	if missing == 0 {
-		pass(fmt.Sprintf("All %d shims installed", len(shimTools)))
+		pass(fmt.Sprintf("All %d shims installed", len(shim.ShimTools)))
 	}
 	return missing
 }
 
-func checkShimBinaryPath() int {
-	binDir, err := platform.BinDir()
-	if err != nil {
+func checkShimBinaryPath(binDir string) int {
+	if binDir == "" {
 		return 0
 	}
 
@@ -112,7 +122,6 @@ func checkShimBinaryPath() int {
 	}
 	currentBin, _ = filepath.EvalSymlinks(currentBin)
 
-	// Check the first shim to see where it points.
 	shimPath := filepath.Join(binDir, "node")
 	data, err := os.ReadFile(shimPath)
 	if err != nil {
@@ -120,9 +129,8 @@ func checkShimBinaryPath() int {
 	}
 
 	content := string(data)
-	// Extract the binary path from: exec "/path/to/driftr" shim node "$@"
-	if idx := strings.Index(content, "exec \""); idx >= 0 {
-		rest := content[idx+6:]
+	if idx := strings.Index(content, shimExecPrefix); idx >= 0 {
+		rest := content[idx+len(shimExecPrefix):]
 		if end := strings.Index(rest, "\""); end >= 0 {
 			shimBin := rest[:end]
 			resolved, _ := filepath.EvalSymlinks(shimBin)
@@ -141,10 +149,9 @@ func checkShimBinaryPath() int {
 	return 0
 }
 
-func checkGlobalDefault() int {
-	cfg, err := config.LoadGlobal()
-	if err != nil {
-		warn(fmt.Sprintf("Cannot read global config: %s", err))
+func checkGlobalDefault(cfg *config.GlobalConfig, cfgErr error) int {
+	if cfgErr != nil {
+		warn(fmt.Sprintf("Cannot read global config: %s", cfgErr))
 		return 1
 	}
 
@@ -157,14 +164,13 @@ func checkGlobalDefault() int {
 	return 0
 }
 
-func checkDefaultsInstalled() int {
-	cfg, err := config.LoadGlobal()
-	if err != nil {
-		return 0 // already reported by checkGlobalDefault
+func checkDefaultsInstalled(cfg *config.GlobalConfig) int {
+	if cfg == nil {
+		return 0
 	}
 
 	issues := 0
-	for _, tool := range []string{"node", "pnpm", "yarn"} {
+	for _, tool := range versionedTools {
 		ver := cfg.Default.GetTool(tool)
 		if ver == "" {
 			continue
@@ -185,20 +191,23 @@ func checkDefaultsInstalled() int {
 	return issues
 }
 
-func checkConflictingManagers() int {
-	binDir, err := platform.BinDir()
-	if err != nil {
-		return 0
+func checkConflictingManagers(binDir string) int {
+	issues := 0
+
+	// nvm is a shell function, not a binary — check $NVM_DIR instead.
+	if nvmDir := os.Getenv("NVM_DIR"); nvmDir != "" {
+		if _, err := os.Stat(filepath.Join(nvmDir, "nvm.sh")); err == nil {
+			warn(fmt.Sprintf("nvm detected ($NVM_DIR=%s) — may conflict with driftr shims", nvmDir))
+			issues++
+		}
 	}
 
-	issues := 0
-	for _, manager := range conflictingManagers {
+	for _, manager := range conflictingBinaries {
 		path, err := exec.LookPath(manager)
 		if err != nil {
 			continue
 		}
-		// Ignore if it's our own shim directory.
-		if filepath.Dir(path) == binDir {
+		if binDir != "" && filepath.Dir(path) == binDir {
 			continue
 		}
 		warn(fmt.Sprintf("%s detected at %s — may conflict with driftr shims", manager, path))
@@ -211,31 +220,26 @@ func checkConflictingManagers() int {
 	return issues
 }
 
-func checkInstalledVersions() int {
-	for _, tool := range []string{"node", "pnpm", "yarn"} {
-		versions, err := platform.ListToolVersions(tool)
-		if err != nil || len(versions) == 0 {
-			continue
+func checkInstalledVersions(toolVersions map[string][]string) int {
+	for _, tool := range versionedTools {
+		if versions := toolVersions[tool]; len(versions) > 0 {
+			pass(fmt.Sprintf("%d %s version(s) installed", len(versions), tool))
 		}
-		pass(fmt.Sprintf("%d %s version(s) installed", len(versions), tool))
 	}
 	return 0
 }
 
-func checkNeedsNode() int {
-	nodeVersions, err := platform.ListToolVersions("node")
-	if err != nil || len(nodeVersions) > 0 {
-		return 0 // node is available
+func checkNeedsNode(toolVersions map[string][]string) int {
+	if len(toolVersions["node"]) > 0 {
+		return 0
 	}
 
 	issues := 0
 	for _, tool := range []string{"pnpm", "yarn"} {
-		versions, err := platform.ListToolVersions(tool)
-		if err != nil || len(versions) == 0 {
-			continue
+		if len(toolVersions[tool]) > 0 {
+			warn(fmt.Sprintf("%s is installed but no node versions found — %s requires Node.js to run", tool, tool))
+			issues++
 		}
-		warn(fmt.Sprintf("%s is installed but no node versions found — %s requires Node.js to run", tool, tool))
-		issues++
 	}
 	return issues
 }
