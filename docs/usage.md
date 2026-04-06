@@ -227,6 +227,24 @@ driftr setup
 
 Run this once after installing Driftr, and again after upgrading to regenerate shims.
 
+## driftr cache
+
+Manage the download cache.
+
+```bash
+# Remove all cached archives to free disk space
+driftr cache clean
+
+# Print the cache directory path
+driftr cache dir
+```
+
+**Notes:**
+
+- `driftr cache clean` removes all files from `~/.driftr/cache/` and reports the freed space
+- Installed tool versions are not affected — only cached downloads are removed
+- Cached archives are automatically reused by `driftr install` to skip re-downloads
+
 ## Resolution Order
 
 When you run a tool (`node`, `npm`, `npx`, `pnpm`, `pnpx`, or `yarn`), Driftr resolves the version in this order:
