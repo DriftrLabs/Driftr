@@ -28,7 +28,10 @@ func newDoctorCmd() *cobra.Command {
 		Short: "Check your driftr installation for problems",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			binDir, _ := platform.BinDir()
+			binDir, err := platform.BinDir()
+			if err != nil {
+				return fmt.Errorf("cannot determine driftr bin directory: %w", err)
+			}
 			cfg, cfgErr := config.LoadGlobal()
 
 			toolVersions := make(map[string][]string)
@@ -69,13 +72,9 @@ func warn(msg string) {
 }
 
 func checkPath(binDir string) int {
-	if binDir == "" {
-		warn("Cannot determine bin directory")
-		return 1
-	}
-
+	cleanBinDir := filepath.Clean(binDir)
 	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
-		if dir == binDir {
+		if filepath.Clean(dir) == cleanBinDir {
 			pass(binDir + " is on PATH")
 			return 0
 		}
@@ -86,12 +85,8 @@ func checkPath(binDir string) int {
 }
 
 func checkShims(binDir string) int {
-	if binDir == "" {
-		return 0
-	}
-
 	missing := 0
-	for _, tool := range shim.ShimTools {
+	for _, tool := range shim.ShimTools() {
 		shimPath := filepath.Join(binDir, tool)
 		info, err := os.Stat(shimPath)
 		if err != nil {
@@ -106,16 +101,12 @@ func checkShims(binDir string) int {
 	}
 
 	if missing == 0 {
-		pass(fmt.Sprintf("All %d shims installed", len(shim.ShimTools)))
+		pass(fmt.Sprintf("All %d shims installed", len(shim.ShimTools())))
 	}
 	return missing
 }
 
 func checkShimBinaryPath(binDir string) int {
-	if binDir == "" {
-		return 0
-	}
-
 	currentBin, err := os.Executable()
 	if err != nil {
 		return 0
@@ -207,7 +198,7 @@ func checkConflictingManagers(binDir string) int {
 		if err != nil {
 			continue
 		}
-		if binDir != "" && filepath.Dir(path) == binDir {
+		if filepath.Dir(path) == binDir {
 			continue
 		}
 		warn(fmt.Sprintf("%s detected at %s — may conflict with driftr shims", manager, path))

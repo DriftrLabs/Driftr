@@ -8,8 +8,13 @@ import (
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
-// ShimTools lists the tools for which shims are created.
-var ShimTools = []string{"node", "npm", "npx", "pnpm", "pnpx", "yarn"}
+// shimTools lists the tools for which shims are created.
+var shimTools = []string{"node", "npm", "npx", "pnpm", "pnpx", "yarn"}
+
+// ShimTools returns the list of tools that have shims.
+func ShimTools() []string {
+	return append([]string(nil), shimTools...)
+}
 
 // GenerateShims creates shim shell scripts in ~/.driftr/bin/.
 // Each shim invokes `driftr shim <tool>` to resolve and exec the real binary.
@@ -33,7 +38,7 @@ func GenerateShims() error {
 		return fmt.Errorf("cannot resolve driftr executable path: %w", err)
 	}
 
-	for _, tool := range ShimTools {
+	for _, tool := range shimTools {
 		if err := writeShim(binDir, tool, driftrBin); err != nil {
 			return fmt.Errorf("failed to create shim for %s: %w", tool, err)
 		}
