@@ -49,7 +49,7 @@ func TestWriteShim_Executable(t *testing.T) {
 func TestWriteShim_AllTools(t *testing.T) {
 	dir := t.TempDir()
 
-	for _, tool := range shimTools {
+	for _, tool := range ShimTools() {
 		if err := writeShim(dir, tool, "/bin/driftr"); err != nil {
 			t.Fatalf("writeShim(%q) error: %v", tool, err)
 		}
@@ -58,18 +58,18 @@ func TestWriteShim_AllTools(t *testing.T) {
 		}
 	}
 
-	// Verify all expected tools are in shimTools.
+	// Verify all expected tools are in ShimTools().
 	expected := map[string]bool{
 		"node": true, "npm": true, "npx": true,
 		"pnpm": true, "pnpx": true, "yarn": true,
 	}
-	for _, tool := range shimTools {
+	for _, tool := range ShimTools() {
 		if !expected[tool] {
-			t.Errorf("unexpected tool in shimTools: %q", tool)
+			t.Errorf("unexpected tool in ShimTools(): %q", tool)
 		}
 		delete(expected, tool)
 	}
 	for tool := range expected {
-		t.Errorf("missing tool in shimTools: %q", tool)
+		t.Errorf("missing tool in ShimTools(): %q", tool)
 	}
 }

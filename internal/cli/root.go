@@ -50,6 +50,7 @@ func NewRootCmd() *cobra.Command {
 		newShimCmd(),
 		newSetupCmd(),
 		newCacheCmd(),
+		newDoctorCmd(),
 		newUpdateCmd(),
 	)
 
