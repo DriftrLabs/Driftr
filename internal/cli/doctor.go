@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/config"
+	"github.com/DriftrLabs/driftr/internal/pathsetup"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/shim"
 )
@@ -23,7 +24,8 @@ var conflictingBinaries = []string{"fnm", "volta", "n"}
 const shimExecPrefix = `exec "`
 
 func newDoctorCmd() *cobra.Command {
-	return &cobra.Command{
+	var fix bool
+	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Check your driftr installation for problems",
 		Args:  cobra.NoArgs,
@@ -47,6 +49,7 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			issues += checkPath(binDir)
+			issues += checkShellRCPlacement(binDir, fix)
 			issues += checkShims(binDir)
 			issues += checkShimBinaryPath(binDir)
 			issues += checkGlobalDefault(cfg, cfgErr)
@@ -64,6 +67,8 @@ func newDoctorCmd() *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fix, "fix", false, "automatically fix detected PATH configuration issues")
+	return cmd
 }
 
 func pass(msg string) {
@@ -84,6 +89,49 @@ func checkPath(binDir string) int {
 	}
 
 	warn(binDir + " is not on PATH — shims won't be found")
+	return 1
+}
+
+// checkShellRCPlacement verifies that binDir is exported from a shell rc file
+// that every invocation of the shell sources (e.g. .zshenv for zsh). Entries
+// in interactive-only files (.zshrc, .bashrc) are flagged as stale because
+// non-interactive shells, scripts, cron, and IDE subprocesses won't see them.
+func checkShellRCPlacement(binDir string, fix bool) int {
+	r, err := pathsetup.Detect(binDir)
+	if err != nil {
+		warn(fmt.Sprintf("Cannot inspect shell rc files: %s", err))
+		return 1
+	}
+
+	if !r.NeedsFix() {
+		pass(fmt.Sprintf("PATH configured in %s (universal shell coverage)", r.Target))
+		return 0
+	}
+
+	switch {
+	case len(r.StaleFiles) > 0:
+		warn(fmt.Sprintf("PATH is only in interactive rc file(s): %s",
+			strings.Join(r.StaleFiles, ", ")))
+		warn(fmt.Sprintf("  scripts, cron, and non-interactive shells won't find driftr — target %s", r.Target))
+	default:
+		warn(fmt.Sprintf("PATH is not configured in any shell rc file — target %s", r.Target))
+	}
+
+	if !fix {
+		warn("  run `driftr doctor --fix` to repair")
+		return 1
+	}
+
+	wrote, file, applyErr := pathsetup.Apply(r)
+	if applyErr != nil {
+		warn(fmt.Sprintf("  fix failed: %s", applyErr))
+		return 1
+	}
+	if wrote {
+		pass(fmt.Sprintf("  fixed: added PATH export to %s (open a new shell to use it)", file))
+		return 0
+	}
+	warn("  nothing to fix")
 	return 1
 }
 
