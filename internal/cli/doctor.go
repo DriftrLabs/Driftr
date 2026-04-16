@@ -35,14 +35,17 @@ func newDoctorCmd() *cobra.Command {
 			cfg, cfgErr := config.LoadGlobal()
 
 			toolVersions := make(map[string][]string)
+			issues := 0
 			for _, tool := range versionedTools {
 				versions, err := platform.ListToolVersions(tool)
-				if err == nil {
-					toolVersions[tool] = versions
+				if err != nil {
+					warn(fmt.Sprintf("Cannot list installed versions for %s: %s", tool, err))
+					issues++
+					continue
 				}
+				toolVersions[tool] = versions
 			}
 
-			issues := 0
 			issues += checkPath(binDir)
 			issues += checkShims(binDir)
 			issues += checkShimBinaryPath(binDir)
