@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -55,6 +56,6 @@ func migratePathConfig() {
 	}
 	fmt.Printf("Migrated PATH config to %s for universal shell coverage.\n", file)
 	if len(r.StaleFiles) > 0 {
-		fmt.Printf("  Note: legacy entries remain in %s — safe to remove.\n", r.StaleFiles[0])
+		fmt.Printf("  Note: legacy entries remain in %s — safe to remove.\n", strings.Join(r.StaleFiles, ", "))
 	}
 }

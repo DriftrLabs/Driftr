@@ -94,21 +94,27 @@ func binDirNeedles(binDir string) []string {
 // Apply writes the PATH export to the recommended target file if missing.
 // Returns (true, target) when it wrote, (false, "") when no change was needed.
 // Never removes entries from stale files — that's left to the user.
-func Apply(r Result) (bool, string, error) {
+func Apply(r Result) (wrote bool, target string, err error) {
 	if !r.NeedsFix() {
 		return false, "", nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(r.Target), 0o755); err != nil {
+	if err = os.MkdirAll(filepath.Dir(r.Target), 0o755); err != nil {
 		return false, "", fmt.Errorf("create profile dir: %w", err)
 	}
 
 	line := exportLine(r.Shell, r.BinDir)
-	f, err := os.OpenFile(r.Target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return false, "", fmt.Errorf("open %s: %w", r.Target, err)
+	f, ferr := os.OpenFile(r.Target, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if ferr != nil {
+		return false, "", fmt.Errorf("open %s: %w", r.Target, ferr)
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close %s: %w", r.Target, cerr)
+			wrote = false
+			target = ""
+		}
+	}()
 
 	// Leading newline when file has content to avoid gluing to prior line.
 	info, _ := f.Stat()
@@ -116,8 +122,8 @@ func Apply(r Result) (bool, string, error) {
 	if info != nil && info.Size() == 0 {
 		prefix = ""
 	}
-	if _, err := fmt.Fprintf(f, "%s# Driftr\n%s\n", prefix, line); err != nil {
-		return false, "", fmt.Errorf("write %s: %w", r.Target, err)
+	if _, werr := fmt.Fprintf(f, "%s# Driftr\n%s\n", prefix, line); werr != nil {
+		return false, "", fmt.Errorf("write %s: %w", r.Target, werr)
 	}
 
 	return true, r.Target, nil
@@ -144,8 +150,12 @@ func DetectShell() Shell {
 	}
 }
 
-// TargetProfile returns the recommended rc file to export PATH from so that
-// every shell invocation (interactive and non-interactive) picks it up.
+// TargetProfile returns the recommended rc file to export PATH from for the
+// widest shell coverage. For zsh this is .zshenv (every invocation). For fish
+// this is conf.d (every invocation). For bash this is .bash_profile (login
+// shells); non-interactive children inherit PATH from the login shell env, so
+// coverage is not truly universal — it depends on the terminal launching a
+// login shell, which most macOS and Linux terminal emulators do.
 func TargetProfile(shell Shell) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

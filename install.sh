@@ -184,14 +184,6 @@ main() {
 }
 
 configure_path() {
-    # Skip if the install dir is already on PATH in the current environment.
-    case ":${PATH:-}:" in
-        *":${INSTALL_DIR}:"*)
-            log "${INSTALL_DIR} already on PATH"
-            return
-            ;;
-    esac
-
     shell_name="$(basename "${SHELL:-/bin/sh}")"
 
     # Fish uses different syntax and a different config location.
@@ -212,19 +204,14 @@ configure_path() {
     # Pick the profile that is read by ALL invocations of the shell (not just
     # interactive ones) so driftr works in scripts, IDE terminals, and cron.
     #   - zsh:  .zshenv is sourced on every invocation
-    #   - bash: .bash_profile for login shells, .bashrc for interactive;
-    #           also write to .profile as a POSIX fallback for non-login
-    #           non-interactive shells that source it
+    #   - bash: .bash_profile is read by login shells; non-interactive children
+    #           inherit PATH from the login shell environment
     case "$shell_name" in
         zsh)
             profile="${ZDOTDIR:-$HOME}/.zshenv"
             ;;
         bash)
-            if [ -f "$HOME/.bash_profile" ] || [ ! -f "$HOME/.bashrc" ]; then
-                profile="$HOME/.bash_profile"
-            else
-                profile="$HOME/.bashrc"
-            fi
+            profile="$HOME/.bash_profile"
             ;;
         *)
             profile="$HOME/.profile"
