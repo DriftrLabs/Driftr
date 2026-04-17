@@ -111,7 +111,9 @@ jobs:
             -f Dockerfile.path-e2e \
             -t driftr-path-e2e-alpine .
       - name: Run
-        run: docker run --rm driftr-path-e2e-alpine
+        # SKIP_SHIM_TESTS: Node.js official binaries are glibc-only and will
+        # not exec on musl libc. Phase 1 already proves driftr works on musl.
+        run: docker run --rm -e SKIP_SHIM_TESTS=1 driftr-path-e2e-alpine
 
   path-e2e-macos:
     name: PATH e2e (macOS)

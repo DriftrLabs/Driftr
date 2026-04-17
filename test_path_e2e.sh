@@ -262,8 +262,15 @@ case "${TEST_SHELL:-all}" in
 esac
 
 printf '\n════════════════ PHASE 2: SHIM + VERSION ════════════════\n'
-install_node_versions
-for_each_active_shell run_shim_tests
+if [ "${SKIP_SHIM_TESTS:-0}" = "1" ]; then
+    # Node.js official binaries are glibc-only and do not run on musl libc.
+    # Phase 1 already proves driftr itself works on musl. Phase 2 is skipped
+    # on Alpine so the musl-compat job does not fail on a Node.js limitation.
+    printf '[SKIP] Phase 2 skipped — Node.js glibc binaries incompatible with musl\n'
+else
+    install_node_versions
+    for_each_active_shell run_shim_tests
+fi
 
 # ── summary ──────────────────────────────────────────────────────────────────
 
