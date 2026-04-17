@@ -1,0 +1,32 @@
+ARG BASE_IMAGE=debian:bookworm-slim
+
+FROM golang:1.26-bookworm AS builder
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /usr/local/bin/driftr ./cmd/driftr/
+
+FROM ${BASE_IMAGE}
+
+ARG SHELL_PKGS="bash"
+ARG TEST_SHELL=bash
+
+COPY scripts/install-deps.sh /install-deps.sh
+RUN sh /install-deps.sh "${SHELL_PKGS}"
+
+COPY --from=builder /usr/local/bin/driftr /usr/local/bin/driftr
+
+# Support both Debian (useradd) and Alpine (adduser -D)
+RUN id driftr 2>/dev/null || \
+    (command -v useradd > /dev/null 2>&1 && useradd -m -s /bin/sh driftr) || \
+    adduser -D -s /bin/sh driftr
+
+USER driftr
+WORKDIR /home/driftr
+ENV TEST_SHELL=${TEST_SHELL}
+
+COPY --chown=driftr:driftr test_path_e2e.sh install.sh ./
+RUN chmod +x test_path_e2e.sh
+
+CMD ["/home/driftr/test_path_e2e.sh"]
