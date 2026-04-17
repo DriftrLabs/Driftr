@@ -116,19 +116,33 @@ assert_shell_fail() {
     fi
 }
 
+# cd_then SHELL DIR CMD — build a shell-appropriate "cd DIR && CMD" string.
+# fish does not support && for chaining (pre-3.0) — use '; and' instead.
+# fish 3.0+ supports && but '; and' works across all fish versions.
+cd_then() { _csh="$1"; _dir="$2"; _c="$3"
+    if [ "$_csh" = "fish" ]; then printf "cd '%s'; and %s" "$_dir" "$_c"
+    else                           printf "cd '%s' && %s"  "$_dir" "$_c"
+    fi
+}
+
 # ── phase 1: PATH config ─────────────────────────────────────────────────────
 
 run_path_tests_zsh() {
     ZSH_BIN=$(command -v zsh 2>/dev/null) || { printf '[SKIP] zsh not installed\n'; return; }
     printf '\n[PATH config — zsh]\n'
+    # configure_path() uses ${ZDOTDIR:-$HOME}/.zshenv. Pin ZDOTDIR=HOME so the
+    # assertion checks the same file that configure_path wrote to, even if the
+    # runner environment has ZDOTDIR set to something else.
+    ZDOTDIR="$HOME"; export ZDOTDIR
+    ZSHENV_PATH="$ZDOTDIR/.zshenv"
     configure_path_for "$ZSH_BIN"
-    assert_cmd "zsh: .zshenv written"              test -f "$HOME/.zshenv"
-    assert_cmd "zsh: .zshenv contains bin dir"     grep -qF "$INSTALL_DIR" "$HOME/.zshenv"
+    assert_cmd "zsh: .zshenv written"              test -f "$ZSHENV_PATH"
+    assert_cmd "zsh: .zshenv contains bin dir"     grep -qF "$INSTALL_DIR" "$ZSHENV_PATH"
     # No --no-rcs: verifies zsh auto-sources .zshenv on every invocation.
     assert_cmd "zsh: non-interactive sources .zshenv" \
-        env -i HOME="$HOME" PATH="$CLEAN_PATH" zsh -c "command -v $SENTINEL"
+        env -i HOME="$HOME" ZDOTDIR="$ZDOTDIR" PATH="$CLEAN_PATH" zsh -c "command -v $SENTINEL"
     assert_cmd "zsh: interactive sources .zshenv" \
-        env -i HOME="$HOME" PATH="$CLEAN_PATH" zsh -i -c "command -v $SENTINEL"
+        env -i HOME="$HOME" ZDOTDIR="$ZDOTDIR" PATH="$CLEAN_PATH" zsh -i -c "command -v $SENTINEL"
 }
 
 run_path_tests_bash() {
@@ -182,6 +196,8 @@ install_node_versions() {
     driftr default node@24
     NODE24_FULL="$(driftr which node 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
 
+    [ -n "$NODE22_FULL" ] || { printf '[FAIL] could not determine full version for node@22\n' >&2; exit 1; }
+    [ -n "$NODE24_FULL" ] || { printf '[FAIL] could not determine full version for node@24\n' >&2; exit 1; }
     printf 'node versions ready (22=%s, 24=%s)\n' "$NODE22_FULL" "$NODE24_FULL"
 }
 
@@ -212,14 +228,14 @@ run_shim_tests() {
     _p1="$(mktemp -d)"
     printf '[tools]\nnode = "%s"\n' "$NODE22_FULL" > "$_p1/.driftr.toml"
     assert_shell_output "$_sh: .driftr.toml pin overrides global" \
-        "$_sh" "cd '$_p1' && node -v" "^v${NODE22_FULL}$"
+        "$_sh" "$(cd_then "$_sh" "$_p1" 'node -v')" "^v${NODE22_FULL}$"
     rm -rf "$_p1"
 
     # pin via package.json driftr key (global=latest, pin=exact 24.x)
     _p2="$(mktemp -d)"
     printf '{"driftr":{"node":"%s"}}\n' "$NODE24_FULL" > "$_p2/package.json"
     assert_shell_output "$_sh: package.json pin overrides global" \
-        "$_sh" "cd '$_p2' && node -v" "^v${NODE24_FULL}$"
+        "$_sh" "$(cd_then "$_sh" "$_p2" 'node -v')" "^v${NODE24_FULL}$"
     rm -rf "$_p2"
 
     # auto-install: pin version that is not installed — shim must exit non-zero.
@@ -227,7 +243,7 @@ run_shim_tests() {
     _p3="$(mktemp -d)"
     printf '[tools]\nnode = "18"\n' > "$_p3/.driftr.toml"
     assert_shell_fail "$_sh: uninstalled pin exits non-zero (node@18)" \
-        "$_sh" "cd '$_p3' && node -v"
+        "$_sh" "$(cd_then "$_sh" "$_p3" 'node -v')"
     rm -rf "$_p3"
 }
 
