@@ -157,11 +157,14 @@ run_fish_tests() {
         grep -q 'set -gx PATH' "$FISH_CONF"
 
     # fish sources conf.d on every invocation, interactive or not.
+    # TMPDIR is required on macOS: fish uses it for its universal variables
+    # socket (fishd). Linux fish works without it; macOS fish does not.
+    FISH_TMPDIR="${TMPDIR:-/tmp}"
     assert_cmd "fish: non-interactive invocation resolves driftr" \
-        env -i HOME="$HOME" PATH="$CLEAN_PATH" \
+        env -i HOME="$HOME" PATH="$CLEAN_PATH" TMPDIR="$FISH_TMPDIR" \
         fish -c "command -v $SENTINEL"
     assert_cmd "fish: type -q succeeds" \
-        env -i HOME="$HOME" PATH="$CLEAN_PATH" \
+        env -i HOME="$HOME" PATH="$CLEAN_PATH" TMPDIR="$FISH_TMPDIR" \
         fish -c "type -q $SENTINEL"
 }
 
