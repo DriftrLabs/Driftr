@@ -69,3 +69,65 @@ jobs:
         run: docker build -f Dockerfile.test -t driftr-test .
       - name: Run integration tests
         run: docker run --rm driftr-test
+
+  path-e2e-docker:
+    name: PATH e2e (${{ matrix.shell }})
+    runs-on: ubuntu-latest
+    needs: [test]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shell: zsh
+            shell_pkgs: "zsh"
+          - shell: bash
+            shell_pkgs: "bash"
+          - shell: fish
+            shell_pkgs: "fish"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg SHELL_PKGS="${{ matrix.shell_pkgs }}" \
+            --build-arg TEST_SHELL=${{ matrix.shell }} \
+            -f Dockerfile.path-e2e \
+            -t driftr-path-e2e-${{ matrix.shell }} .
+      - name: Run
+        run: docker run --rm driftr-path-e2e-${{ matrix.shell }}
+
+  path-e2e-alpine:
+    name: PATH e2e (alpine/musl)
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg BASE_IMAGE=alpine:3.21 \
+            --build-arg SHELL_PKGS="bash zsh fish" \
+            --build-arg TEST_SHELL=bash \
+            -f Dockerfile.path-e2e \
+            -t driftr-path-e2e-alpine .
+      - name: Run
+        run: docker run --rm driftr-path-e2e-alpine
+
+  path-e2e-macos:
+    name: PATH e2e (macOS)
+    runs-on: macos-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache: true
+      - name: Install fish
+        run: brew install fish
+      - name: Build driftr
+        run: go build -o /tmp/driftr ./cmd/driftr/
+      - name: Run PATH e2e
+        run: |
+          export PATH="/tmp:$PATH"
+          TEST_SHELL=all sh test_path_e2e.sh
