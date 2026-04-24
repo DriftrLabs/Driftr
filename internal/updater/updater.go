@@ -246,11 +246,11 @@ func replaceBinary(newPath, oldPath string) error {
 		tmpPath := oldPath + ".driftr-update"
 		if err2 := ioutil.CopyFile(newPath, tmpPath); err2 != nil {
 			os.Remove(tmpPath)
-			return fmt.Errorf("rename failed (%v); fallback copy also failed: %w", err, err2)
+			return fmt.Errorf("rename failed (%w); fallback copy also failed: %w", err, err2)
 		}
 		if err2 := os.Rename(tmpPath, oldPath); err2 != nil {
 			os.Remove(tmpPath)
-			return fmt.Errorf("rename failed (%v); atomic replace also failed: %w", err, err2)
+			return fmt.Errorf("rename failed (%w); atomic replace also failed: %w", err, err2)
 		}
 		return nil
 	}

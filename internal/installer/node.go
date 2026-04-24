@@ -55,9 +55,10 @@ func (c *installCleanup) run() {
 		if err == nil {
 			tmpDir := fmt.Sprintf("%s.tmp-%d", dir, os.Getpid())
 			if c.verbose {
-				fmt.Fprintf(os.Stderr, "  Cleaning up partial install: %s\n", tmpDir)
+				fmt.Fprintf(os.Stderr, "  Cleaning up partial install: %s\n", dir)
 			}
 			os.RemoveAll(tmpDir)
+			os.RemoveAll(dir)
 		}
 		c.version = ""
 	}
