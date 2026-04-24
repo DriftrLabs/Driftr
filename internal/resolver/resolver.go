@@ -295,7 +295,11 @@ func resolveFromProject(tool, dir string, verbose bool) (*Resolution, error) {
 			if err != nil {
 				return nil, err
 			}
-			if ver != "" {
+			if ver == "" {
+				if _, statErr := os.Stat(nvmrcPath); statErr == nil {
+					fmt.Fprintf(os.Stderr, "warning: .nvmrc in %s contains an unsupported format (e.g. LTS aliases); ignoring\n", current)
+				}
+			} else {
 				return resolveProjectVersion(tool, ver, current, SourceNvmrc)
 			}
 
@@ -307,7 +311,11 @@ func resolveFromProject(tool, dir string, verbose bool) (*Resolution, error) {
 			if err != nil {
 				return nil, err
 			}
-			if ver != "" {
+			if ver == "" {
+				if _, statErr := os.Stat(nodeVersionPath); statErr == nil {
+					fmt.Fprintf(os.Stderr, "warning: .node-version in %s contains an unsupported format (e.g. LTS aliases); ignoring\n", current)
+				}
+			} else {
 				return resolveProjectVersion(tool, ver, current, SourceNodeVersion)
 			}
 		}
