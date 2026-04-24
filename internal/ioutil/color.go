@@ -1,12 +1,21 @@
 package ioutil
 
-import "os"
+import (
+	"os"
+	"sync"
+)
+
+var (
+	ttyOnce sync.Once
+	isTTY   bool
+)
 
 func colorEnabled() bool {
 	if os.Getenv("NO_COLOR") != "" {
 		return false
 	}
-	return IsTerminal(os.Stdout)
+	ttyOnce.Do(func() { isTTY = IsTerminal(os.Stdout) })
+	return isTTY
 }
 
 func colorize(s, ansiCode string) string {

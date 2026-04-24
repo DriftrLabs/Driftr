@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -42,10 +44,12 @@ func newListCmd() *cobra.Command {
 
 			defaultVer := cfg.Default.GetTool(tool)
 
-			res, _ := resolver.ResolveTool(tool, "", false)
+			res, resolveErr := resolver.ResolveTool(tool, "", false)
 			activeVer := ""
-			if res != nil {
+			if resolveErr == nil && res != nil {
 				activeVer = res.Version
+			} else if resolveErr != nil && !strings.HasPrefix(resolveErr.Error(), "no "+tool+" version configured") {
+				fmt.Fprintf(os.Stderr, "warning: could not determine active %s version: %v\n", tool, resolveErr)
 			}
 
 			fmt.Printf("Installed %s versions:\n", tool)
