@@ -57,6 +57,17 @@ func newUninstallCmd() *cobra.Command {
 				fmt.Printf("Warning: %s %s is the current global default. Run `driftr default %s@<version>` to set a new one.\n", tool, versionStr, tool)
 			}
 
+			// Warn if this version is pinned in the project config.
+			cwd, cwdErr := os.Getwd()
+			if cwdErr == nil {
+				if proj, err := config.LoadProject(cwd); err == nil && proj != nil && proj.Tools.GetTool(tool) == versionStr {
+					fmt.Printf("Warning: %s@%s is pinned in .driftr.toml — uninstalling will break this project until you run 'driftr install %s@%s' or update the pin\n", tool, versionStr, tool, versionStr)
+				}
+				if pkg, err := config.LoadPackageJSON(cwd); err == nil && pkg != nil && pkg.Driftr.GetTool(tool) == versionStr {
+					fmt.Printf("Warning: %s@%s is pinned in package.json — uninstalling will break this project until you run 'driftr install %s@%s' or update the pin\n", tool, versionStr, tool, versionStr)
+				}
+			}
+
 			if verbose {
 				fmt.Printf("  Removing: %s\n", versionDir)
 			}
