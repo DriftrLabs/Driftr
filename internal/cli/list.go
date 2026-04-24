@@ -2,11 +2,15 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/config"
 	"github.com/DriftrLabs/driftr/internal/installer"
+	"github.com/DriftrLabs/driftr/internal/ioutil"
+	"github.com/DriftrLabs/driftr/internal/resolver"
 )
 
 func newListCmd() *cobra.Command {
@@ -40,17 +44,53 @@ func newListCmd() *cobra.Command {
 
 			defaultVer := cfg.Default.GetTool(tool)
 
-			fmt.Printf("Installed %s versions:\n", tool)
-			for _, v := range versions {
-				marker := "  "
-				if v == defaultVer {
-					marker = "* "
-				}
-				fmt.Printf("  %s%s\n", marker, v)
+			res, resolveErr := resolver.ResolveTool(tool, "", false)
+			activeVer := ""
+			if resolveErr == nil && res != nil {
+				activeVer = res.Version
+			} else if resolveErr != nil && !strings.HasPrefix(resolveErr.Error(), "no "+tool+" version configured") {
+				fmt.Fprintf(os.Stderr, "warning: could not determine active %s version: %v\n", tool, resolveErr)
 			}
 
+			fmt.Printf("Installed %s versions:\n", tool)
+			for _, v := range versions {
+				isActive := activeVer != "" && v == activeVer
+				isDefault := defaultVer != "" && v == defaultVer
+
+				activeMark := " "
+				if isActive {
+					activeMark = ">"
+				}
+				defaultMark := " "
+				if isDefault {
+					defaultMark = "*"
+				}
+				line := activeMark + defaultMark + " " + v
+
+				switch {
+				case isActive && isDefault:
+					line = ioutil.Green(ioutil.Bold(line))
+				case isActive:
+					line = ioutil.Green(line)
+				case !isActive && !isDefault:
+					line = ioutil.Dim(line)
+				}
+
+				fmt.Printf("  %s\n", line)
+			}
+
+			var legend []string
+			if activeVer != "" {
+				legend = append(legend, "  > = active (current directory)")
+			}
 			if defaultVer != "" {
-				fmt.Printf("\n  * = global default\n")
+				legend = append(legend, "  * = global default")
+			}
+			if len(legend) > 0 {
+				fmt.Println()
+				for _, l := range legend {
+					fmt.Println(l)
+				}
 			}
 
 			return nil
