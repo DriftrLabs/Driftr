@@ -52,14 +52,16 @@ func InstallYarn(versionStr string, verbose bool) (string, error) {
 	}
 
 	// Verify integrity.
-	if rv.Dist.Integrity != "" {
-		if verbose {
-			fmt.Println("  Verifying integrity...")
-		}
-		if err := VerifyIntegrity(archivePath, rv.Dist.Integrity); err != nil {
-			os.Remove(archivePath)
-			return "", err
-		}
+	if rv.Dist.Integrity == "" {
+		os.Remove(archivePath)
+		return "", fmt.Errorf("registry metadata for yarn %s is missing integrity data; refusing to install unverified package", resolvedVersion)
+	}
+	if verbose {
+		fmt.Println("  Verifying integrity...")
+	}
+	if err := VerifyIntegrity(archivePath, rv.Dist.Integrity); err != nil {
+		os.Remove(archivePath)
+		return "", err
 	}
 
 	// Extract to version directory.
