@@ -3,6 +3,7 @@ package installer
 import (
 	"bufio"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -92,7 +93,7 @@ func VerifyChecksum(archivePath, version string, verbose bool) error {
 		fmt.Printf("  Computed SHA256: %s\n", actual)
 	}
 
-	if actual != expected {
+	if subtle.ConstantTimeCompare([]byte(actual), []byte(expected)) != 1 {
 		return fmt.Errorf("checksum mismatch for %s\n  expected: %s\n  got:      %s\nThe download may be corrupted. Delete the cached file and try again:\n  rm %s",
 			filename, expected, actual, archivePath)
 	}
