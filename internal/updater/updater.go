@@ -24,7 +24,18 @@ const (
 	apiBaseURL = "https://api.github.com/repos/" + repo
 )
 
-var httpClient = &http.Client{Timeout: 60 * time.Second}
+var httpClient = &http.Client{
+	Timeout: 60 * time.Second,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" {
+			return fmt.Errorf("refusing redirect to non-HTTPS URL: %s", req.URL)
+		}
+		if len(via) >= 3 {
+			return fmt.Errorf("too many redirects")
+		}
+		return nil
+	},
+}
 
 // githubRelease represents the relevant fields from the GitHub releases API.
 type githubRelease struct {
