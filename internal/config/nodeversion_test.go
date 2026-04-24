@@ -17,6 +17,12 @@ func TestLoadNodeVersion(t *testing.T) {
 		{"partial major", "22\n", "22"},
 		{"with whitespace", "  22.14.0  \n", "22.14.0"},
 		{"empty file", "", ""},
+		{"multi-line", "22.14.0\n18.0.0\n", "22.14.0"},
+		{"comment then version", "# pinned node\n22.14.0\n", "22.14.0"},
+		{"only comment", "# nothing\n", ""},
+		{"lts star", "lts/*\n", ""},
+		{"lts named", "lts/hydrogen\n", ""},
+		{"CRLF", "22.14.0\r\n", "22.14.0"},
 	}
 
 	for _, tt := range tests {

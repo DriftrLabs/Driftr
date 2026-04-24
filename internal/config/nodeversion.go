@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // LoadNodeVersion reads the .node-version file from the given directory.
@@ -20,12 +19,5 @@ func LoadNodeVersion(dir string) (string, error) {
 		return "", err
 	}
 
-	ver := strings.TrimSpace(string(data))
-	ver = strings.TrimPrefix(ver, "v")
-
-	if ver == "" {
-		return "", nil
-	}
-
-	return ver, nil
+	return parseVersionFile(string(data))
 }
