@@ -15,7 +15,18 @@ import (
 const nodeDistBaseURL = "https://nodejs.org/dist"
 
 // httpClient is the shared HTTP client for all installer network operations.
-var httpClient = &http.Client{Timeout: 120 * time.Second}
+var httpClient = &http.Client{
+	Timeout: 120 * time.Second,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.URL.Scheme != "https" {
+			return fmt.Errorf("refusing redirect to non-HTTPS URL: %s", req.URL)
+		}
+		if len(via) >= 3 {
+			return fmt.Errorf("too many redirects")
+		}
+		return nil
+	},
+}
 
 // DownloadURL returns the download URL for a given Node.js version.
 func DownloadURL(version string) string {
