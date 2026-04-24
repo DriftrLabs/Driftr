@@ -20,8 +20,9 @@ import (
 )
 
 const (
-	repo       = "DriftrLabs/driftr"
-	apiBaseURL = "https://api.github.com/repos/" + repo
+	repo                    = "DriftrLabs/driftr"
+	apiBaseURL              = "https://api.github.com/repos/" + repo
+	maxUpdaterDownloadBytes = 50 * 1024 * 1024 // 50 MB
 )
 
 var httpClient = &http.Client{
@@ -148,12 +149,13 @@ func downloadFile(url, dest string) error {
 	}
 	defer f.Close()
 
+	limited := io.LimitReader(resp.Body, maxUpdaterDownloadBytes)
 	if ioutil.IsTerminal(os.Stderr) {
 		pw := &ioutil.ProgressWriter{Dest: f, Total: resp.ContentLength}
-		_, err = io.Copy(pw, resp.Body)
+		_, err = io.Copy(pw, limited)
 		pw.Finish()
 	} else {
-		_, err = io.Copy(f, resp.Body)
+		_, err = io.Copy(f, limited)
 	}
 	return err
 }
