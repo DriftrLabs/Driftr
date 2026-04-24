@@ -242,11 +242,17 @@ func extractBinary(archivePath, destPath string) error {
 }
 
 func replaceBinary(newPath, oldPath string) error {
-	// Atomic replace: rename new over old.
-	// On Unix this works even while the old binary is running.
 	if err := os.Rename(newPath, oldPath); err != nil {
-		// Cross-device rename fails — fall back to copy.
-		return ioutil.CopyFile(newPath, oldPath)
+		tmpPath := oldPath + ".driftr-update"
+		if err2 := ioutil.CopyFile(newPath, tmpPath); err2 != nil {
+			os.Remove(tmpPath)
+			return fmt.Errorf("rename failed (%v); fallback copy also failed: %w", err, err2)
+		}
+		if err2 := os.Rename(tmpPath, oldPath); err2 != nil {
+			os.Remove(tmpPath)
+			return fmt.Errorf("rename failed (%v); atomic replace also failed: %w", err, err2)
+		}
+		return nil
 	}
 	return nil
 }
