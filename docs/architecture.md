@@ -103,9 +103,11 @@ The resolver follows a strict priority order:
 1. **Explicit** -- `--node` flag on `driftr run`
 2. **Project** -- `.driftr.toml` found by walking up from `cwd`
 3. **package.json** -- `driftr` key in `package.json`, same walk-up
-4. **Global** -- `~/.driftr/config/config.toml`
+4. **`.nvmrc`** -- node only, found by walking up from `cwd`
+5. **`.node-version`** -- node only, found by walking up from `cwd`
+6. **Global** -- `~/.driftr/config/config.toml`
 
-In each directory, `.driftr.toml` is checked before `package.json`. The closest config to the working directory wins, regardless of format.
+In each directory, `.driftr.toml` is checked before `package.json`, then `.nvmrc`, then `.node-version` (node only). The closest config to the working directory wins, regardless of format.
 
 Each tool resolves independently: `npm`/`npx` resolve via node's version (bundled), `pnpm`/`pnpx` via pnpm's version, and `yarn` via yarn's version. There is no system fallback — if no version is configured, Driftr returns an actionable error.
 

@@ -122,7 +122,7 @@ This writes the version in the other format and removes the old config.
 **Requirements:**
 - The version must already be installed
 - `package.json` format requires an existing `package.json` file (run `npm init` first)
-- `package.json` format currently only supports `node`. For pnpm and yarn pinning, use `.driftr.toml`
+- `package.json` format supports `node`, `pnpm`, and `yarn`
 
 **Behavior:**
 - Anyone who clones the project and has Driftr set up will automatically use the pinned version
@@ -245,6 +245,35 @@ driftr cache dir
 - Installed tool versions are not affected — only cached downloads are removed
 - Cached archives are automatically reused by `driftr install` to skip re-downloads
 
+## driftr doctor
+
+Check your Driftr installation for common problems.
+
+```bash
+driftr doctor         # run all checks
+driftr doctor --fix   # auto-fix PATH configuration issues
+```
+
+Runs 9 checks: PATH presence, shell rc file placement, shim existence, shim binary path,
+global default set, defaults installed, conflicting managers (nvm/fnm/volta/n), installed
+version counts, and pnpm/yarn without node.
+
+The `--fix` flag automatically adds a PATH export to the correct target file (e.g. `.zshenv`
+for zsh users). Any stale export in an old rc file is reported as a warning and can be removed
+manually. Other issues require manual action per the printed suggestion.
+
+## driftr self-update
+
+Update Driftr to the latest version.
+
+```bash
+driftr self-update
+```
+
+After a successful update, automatically migrates PATH configuration if it was placed in an
+interactive-only file (e.g. `.zshrc`) to the universal target (`.zshenv` for zsh). Prints a
+note about any stale entries in old rc files — safe to remove manually.
+
 ## Resolution Order
 
 When you run a tool (`node`, `npm`, `npx`, `pnpm`, `pnpx`, or `yarn`), Driftr resolves the version in this order:
@@ -254,7 +283,9 @@ When you run a tool (`node`, `npm`, `npx`, `pnpm`, `pnpx`, or `yarn`), Driftr re
 | 1 | Explicit `--node` flag | `driftr run --node 24 -- ...` |
 | 2 | Project `.driftr.toml` | Found in current or parent directory |
 | 3 | `package.json` driftr key | Found in current or parent directory |
-| 4 | Global default | Set via `driftr default` |
+| 4 | `.nvmrc` (node only) | Found in current or parent directory |
+| 5 | `.node-version` (node only) | Found in current or parent directory |
+| 6 | Global default | Set via `driftr default` |
 
 If no version is configured at any level, Driftr prints an actionable error.
 
@@ -269,8 +300,8 @@ If no version is configured at any level, Driftr prints an actionable error.
 ```bash
 # One-time setup
 driftr setup
-echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
+echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv  # zsh — use ~/.bash_profile for bash
+source ~/.zshenv
 
 # Install your toolchain
 driftr install node@22

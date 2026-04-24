@@ -25,7 +25,7 @@ Driftr is a new project. It doesn't have Volta's years of polish or fnm's commun
 - **Shim-based** -- `node`, `npm`, `npx`, `pnpm`, `pnpx`, and `yarn` just work, resolved per-project or globally
 - **Fast** -- near-zero overhead via `syscall.Exec` process replacement
 - **Minimal** -- 2 external dependencies (cobra + toml), everything else is Go stdlib
-- **Deterministic** -- explicit resolution chain: project config > `package.json` > global default
+- **Deterministic** -- explicit resolution chain: project config > `package.json` > `.nvmrc` / `.node-version` (node) > global default
 - **Secure** -- SHA256 and SHA-512 SRI checksum verification on every download
 - **Simple** -- a handful of commands cover the entire workflow
 
@@ -74,6 +74,7 @@ pnpm -v   # resolves automatically
 | `driftr cache clean` | Remove all cached downloads to free disk space |
 | `driftr cache dir` | Print the cache directory path |
 | `driftr self-update` | Update Driftr to the latest version |
+| `driftr doctor [--fix]` | Check your Driftr installation for common problems |
 
 All commands support `-v` / `--verbose` for detailed output including resolver tracing and checksum details.
 
@@ -99,8 +100,10 @@ flowchart TD
     C --> C1["1. explicit flag"]
     C --> C2["2. .driftr.toml\n(walks up dirs)"]
     C --> C3["3. package.json driftr key\n(walks up dirs)"]
-    C --> C4["4. global config.toml"]
-    C1 & C2 & C3 & C4 --> D["syscall.Exec\nreplaces process with real node"]
+    C --> C4["4. .nvmrc (node only)\n(walks up dirs)"]
+    C --> C5["5. .node-version (node only)\n(walks up dirs)"]
+    C --> C6["6. global config.toml"]
+    C1 & C2 & C3 & C4 & C5 & C6 --> D["syscall.Exec\nreplaces process with real node"]
 ```
 
 Shims in `~/.driftr/bin/` intercept calls to `node`, `npm`, `npx`, `pnpm`, `pnpx`, and `yarn`. The resolver determines the correct version, and `syscall.Exec` replaces the process with the real binary. Standalone tools (node, pnpm) are exec'd directly. Tools that need Node.js (yarn) are exec'd as `node <tool-script>`.

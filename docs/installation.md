@@ -91,23 +91,49 @@ This creates the following structure:
 
 Add the shim directory to the **beginning** of your `PATH` so Driftr's shims take priority over any system-installed Node.js.
 
-### Zsh (~/.zshrc)
+### Zsh (~/.zshenv)
 
 ```bash
-export PATH="$HOME/.driftr/bin:$PATH"
+echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv
 ```
 
-### Bash (~/.bashrc or ~/.bash_profile)
+`.zshenv` is sourced by every zsh invocation — interactive shells, scripts, cron, and IDE
+terminals. Do not use `.zshrc`, which is only sourced for interactive shells.
+
+> **macOS note:** On macOS, `/etc/zprofile` runs `/usr/libexec/path_helper` after `~/.zshenv`
+> is sourced for login shells (Terminal.app and iTerm2 open login shells by default).
+> `path_helper` rebuilds PATH putting `/usr/local/bin` (Intel Homebrew) or `/opt/homebrew/bin`
+> (Apple Silicon) first, which can shadow the driftr shim. To guarantee driftr wins, also add
+> the export to `~/.zprofile` so it runs after `path_helper`:
+>
+> ```bash
+> echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zprofile
+> ```
+
+### Bash (~/.bash_profile)
 
 ```bash
-export PATH="$HOME/.driftr/bin:$PATH"
+echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.bash_profile
 ```
+
+### Fish (~/.config/fish/conf.d/driftr.fish)
+
+```bash
+echo 'set -gx PATH $HOME/.driftr/bin $PATH' >> ~/.config/fish/conf.d/driftr.fish
+```
+
+Or let `driftr doctor --fix` handle it automatically.
 
 Then reload your shell:
 
 ```bash
-source ~/.zshrc   # or source ~/.bashrc
+source ~/.zshenv   # zsh
+# or source ~/.bash_profile for bash
 ```
+
+**Tip:** Run `driftr doctor` to verify PATH is configured correctly. Use `driftr doctor --fix`
+to automatically add a PATH export to the correct target file (stale entries in old rc files
+are flagged but not removed — safe to clean up manually).
 
 ### Verify
 

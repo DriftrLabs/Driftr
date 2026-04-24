@@ -188,9 +188,6 @@ Group tests under numbered section headers to keep them organized.
 
 ### Medium Complexity
 
-- `.nvmrc` and `.node-version` file support in the resolver
-- `driftr doctor` command for environment health checks
-- pnpm and yarn pinning in `package.json` format (currently `.driftr.toml` only)
 - Checksum verification for pnpm standalone binaries
 
 ### Larger Features
