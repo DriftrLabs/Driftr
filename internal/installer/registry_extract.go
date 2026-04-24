@@ -12,7 +12,11 @@ import (
 
 // ExtractRegistryPackage extracts an npm registry tarball to the destination directory.
 // npm tarballs contain a top-level "package/" prefix which is stripped during extraction.
-func ExtractRegistryPackage(archivePath, destDir string) error {
+// binaryPath is used to detect a concurrent install race on rename failure.
+func ExtractRegistryPackage(archivePath, destDir, binaryPath string) error {
+	tmpDir := fmt.Sprintf("%s.tmp-%d", destDir, os.Getpid())
+	os.RemoveAll(tmpDir) // clear stale tmp from prior crash with same PID
+
 	f, err := os.Open(archivePath)
 	if err != nil {
 		return fmt.Errorf("failed to open archive: %w", err)
@@ -25,16 +29,16 @@ func ExtractRegistryPackage(archivePath, destDir string) error {
 	}
 	defer gz.Close()
 
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
+	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create destination dir: %w", err)
 	}
 
-	// Use os.Root to sandbox all file operations within destDir.
-	root, err := os.OpenRoot(destDir)
+	// Use os.Root to sandbox all file operations within tmpDir.
+	root, err := os.OpenRoot(tmpDir)
 	if err != nil {
+		os.RemoveAll(tmpDir)
 		return fmt.Errorf("failed to open root dir: %w", err)
 	}
-	defer root.Close()
 
 	tr := tar.NewReader(gz)
 	for {
@@ -43,6 +47,8 @@ func ExtractRegistryPackage(archivePath, destDir string) error {
 			break
 		}
 		if err != nil {
+			root.Close()
+			os.RemoveAll(tmpDir)
 			return fmt.Errorf("failed to read tar entry: %w", err)
 		}
 
@@ -56,8 +62,22 @@ func ExtractRegistryPackage(archivePath, destDir string) error {
 		}
 
 		if err := extractToRoot(root, name, hdr, tr); err != nil {
+			root.Close()
+			os.RemoveAll(tmpDir)
 			return err
 		}
+	}
+
+	root.Close()
+
+	if err := os.Rename(tmpDir, destDir); err != nil {
+		// Another process may have won the race — check if binary exists
+		if _, statErr := os.Stat(binaryPath); statErr == nil {
+			os.RemoveAll(tmpDir)
+			return nil
+		}
+		os.RemoveAll(tmpDir)
+		return fmt.Errorf("failed to finalize install: %w", err)
 	}
 
 	return nil

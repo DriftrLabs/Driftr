@@ -1,7 +1,6 @@
 package installer
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -73,15 +72,8 @@ func InstallYarn(versionStr string, verbose bool) (string, error) {
 	if verbose {
 		fmt.Printf("  Extracting to: %s\n", versionDir)
 	}
-	if err := ExtractRegistryPackage(archivePath, versionDir); err != nil {
-		os.RemoveAll(versionDir)
+	if err := ExtractRegistryPackage(archivePath, versionDir, binPath); err != nil {
 		return "", fmt.Errorf("extraction failed: %w", err)
-	}
-
-	// Verify the binary exists after extraction.
-	if _, err := os.Stat(binPath); errors.Is(err, os.ErrNotExist) {
-		os.RemoveAll(versionDir)
-		return "", fmt.Errorf("yarn binary not found after extraction at %s", binPath)
 	}
 
 	// Ensure the binary is executable.

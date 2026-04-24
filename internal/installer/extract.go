@@ -77,7 +77,10 @@ func Extract(archivePath, version string, verbose bool) error {
 		return nil
 	}
 
-	if err := os.MkdirAll(destDir, 0o755); err != nil {
+	tmpDir := fmt.Sprintf("%s.tmp-%d", destDir, os.Getpid())
+	os.RemoveAll(tmpDir) // clear stale tmp from prior crash with same PID
+
+	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create version dir: %w", err)
 	}
 
@@ -85,22 +88,26 @@ func Extract(archivePath, version string, verbose bool) error {
 		fmt.Printf("  Extracting to: %s\n", destDir)
 	}
 
-	// Use os.Root to sandbox all file operations within destDir.
+	// Use os.Root to sandbox all file operations within tmpDir.
 	// The kernel enforces that no extracted path can escape this directory.
-	root, err := os.OpenRoot(destDir)
+	root, err := os.OpenRoot(tmpDir)
 	if err != nil {
+		os.RemoveAll(tmpDir)
 		return fmt.Errorf("failed to open root dir: %w", err)
 	}
-	defer root.Close()
 
 	f, err := os.Open(archivePath)
 	if err != nil {
+		root.Close()
+		os.RemoveAll(tmpDir)
 		return fmt.Errorf("failed to open archive: %w", err)
 	}
 	defer f.Close()
 
 	gz, err := gzip.NewReader(f)
 	if err != nil {
+		root.Close()
+		os.RemoveAll(tmpDir)
 		return fmt.Errorf("failed to create gzip reader: %w", err)
 	}
 	defer gz.Close()
@@ -116,6 +123,8 @@ func Extract(archivePath, version string, verbose bool) error {
 			break
 		}
 		if err != nil {
+			root.Close()
+			os.RemoveAll(tmpDir)
 			return fmt.Errorf("failed to read archive: %w", err)
 		}
 
@@ -131,16 +140,32 @@ func Extract(archivePath, version string, verbose bool) error {
 		}
 
 		if err := extractToRoot(root, relPath, hdr, tr); err != nil {
+			root.Close()
+			os.RemoveAll(tmpDir)
 			return err
 		}
 	}
 
 	// Verify the node binary exists after extraction.
 	if _, err := root.Stat(filepath.Join("bin", "node")); err != nil {
+		root.Close()
+		os.RemoveAll(tmpDir)
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("extraction completed but node binary not found at %s", nodeBin)
 		}
 		return fmt.Errorf("failed to verify extracted node binary at %s: %w", nodeBin, err)
+	}
+
+	root.Close()
+
+	if err := os.Rename(tmpDir, destDir); err != nil {
+		// Another process may have won the race — check if binary exists
+		if _, statErr := os.Stat(nodeBin); statErr == nil {
+			os.RemoveAll(tmpDir)
+			return nil
+		}
+		os.RemoveAll(tmpDir)
+		return fmt.Errorf("failed to finalize install: %w", err)
 	}
 
 	return nil

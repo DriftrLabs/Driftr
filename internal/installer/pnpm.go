@@ -1,7 +1,6 @@
 package installer
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -74,18 +73,8 @@ func InstallPnpm(versionStr string, verbose bool) (string, error) {
 	if verbose {
 		fmt.Printf("  Extracting to: %s\n", versionDir)
 	}
-	if err := ExtractRegistryPackage(archivePath, versionDir); err != nil {
-		os.RemoveAll(versionDir)
+	if err := ExtractRegistryPackage(archivePath, versionDir, binPath); err != nil {
 		return "", fmt.Errorf("extraction failed: %w", err)
-	}
-
-	// Verify the binary exists after extraction.
-	if _, err := os.Stat(binPath); err != nil {
-		os.RemoveAll(versionDir)
-		if errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("pnpm binary not found after extraction at %s", binPath)
-		}
-		return "", fmt.Errorf("failed to verify pnpm binary at %s: %w", binPath, err)
 	}
 
 	// Ensure the binary is executable.
