@@ -14,6 +14,8 @@ import (
 
 const nodeDistBaseURL = "https://nodejs.org/dist"
 
+const maxNodeDownloadBytes = 500 * 1024 * 1024 // 500 MB
+
 // httpClient is the shared HTTP client for all installer network operations.
 var httpClient = &http.Client{
 	Timeout: 120 * time.Second,
@@ -93,12 +95,13 @@ func Download(version string, verbose bool, cleanup *installCleanup) (string, er
 		cleanup.setTmpFile(tmpPath)
 	}
 
+	limited := io.LimitReader(resp.Body, maxNodeDownloadBytes)
 	if ioutil.IsTerminal(os.Stderr) {
 		pw := &ioutil.ProgressWriter{Dest: tmpFile, Total: resp.ContentLength}
-		_, err = io.Copy(pw, resp.Body)
+		_, err = io.Copy(pw, limited)
 		pw.Finish()
 	} else {
-		_, err = io.Copy(tmpFile, resp.Body)
+		_, err = io.Copy(tmpFile, limited)
 	}
 	tmpFile.Close()
 	if err != nil {

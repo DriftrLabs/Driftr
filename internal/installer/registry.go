@@ -20,6 +20,8 @@ import (
 
 const registryBaseURL = "https://registry.npmjs.org"
 
+const maxRegistryDownloadBytes = 50 * 1024 * 1024 // 50 MB
+
 // registryPackage represents the top-level npm registry response for a package.
 type registryPackage struct {
 	Name     string                     `json:"name"`
@@ -176,12 +178,13 @@ func DownloadRegistryPackage(pkg, ver string, verbose bool) (string, *registryVe
 	}
 	tmpPath := tmpFile.Name()
 
+	limited := io.LimitReader(resp.Body, maxRegistryDownloadBytes)
 	if ioutil.IsTerminal(os.Stderr) {
 		pw := &ioutil.ProgressWriter{Dest: tmpFile, Total: resp.ContentLength}
-		_, err = io.Copy(pw, resp.Body)
+		_, err = io.Copy(pw, limited)
 		pw.Finish()
 	} else {
-		_, err = io.Copy(tmpFile, resp.Body)
+		_, err = io.Copy(tmpFile, limited)
 	}
 	tmpFile.Close()
 	if err != nil {
