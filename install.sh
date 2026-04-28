@@ -218,23 +218,37 @@ configure_path() {
             ;;
     esac
 
-    # Dedup: only check the target file. If the user has the line in another
-    # rc file from a prior install, warn but still write to the new target so
-    # non-interactive shells pick it up.
+    # Write to primary profile for non-interactive shell coverage.
     if [ -f "$profile" ] && grep -qF "$INSTALL_DIR" "$profile"; then
         log "${INSTALL_DIR} already configured in ${profile}"
-        return
+    else
+        for stale in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile" "$HOME/.bash_profile"; do
+            [ "$stale" = "$profile" ] && continue
+            # On macOS zsh we intentionally also write to .zshrc below — skip the warning for it.
+            [ "$shell_name" = "zsh" ] && [ "$(uname)" = "Darwin" ] && [ "$stale" = "$HOME/.zshrc" ] && continue
+            if [ -f "$stale" ] && grep -qF "$INSTALL_DIR" "$stale"; then
+                log "note: ${INSTALL_DIR} is also in ${stale} — consider removing that entry to avoid duplicate PATH"
+            fi
+        done
+
+        printf '\n# Driftr\n%s\n' "$path_line" >> "$profile"
+        log "Added ${INSTALL_DIR} to PATH in ${profile}"
     fi
 
-    for stale in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile" "$HOME/.bash_profile"; do
-        [ "$stale" = "$profile" ] && continue
-        if [ -f "$stale" ] && grep -qF "$INSTALL_DIR" "$stale"; then
-            log "note: ${INSTALL_DIR} is also in ${stale} — consider removing that entry to avoid duplicate PATH"
+    # macOS path_helper workaround: /usr/libexec/path_helper (invoked via brew shellenv
+    # in ~/.zprofile) rebuilds PATH for every login shell, pushing .zshenv entries
+    # after /opt/homebrew/bin. This causes Homebrew's node to shadow driftr shims.
+    # Appending to .zshrc (sourced last in interactive sessions) re-prepends the
+    # install dir so shims always win.
+    if [ "$shell_name" = "zsh" ] && [ "$(uname)" = "Darwin" ]; then
+        zshrc="${ZDOTDIR:-$HOME}/.zshrc"
+        if [ -f "$zshrc" ] && grep -qF "$INSTALL_DIR" "$zshrc"; then
+            : # already present
+        else
+            printf '\n# Driftr — re-export after path_helper/brew shellenv so shims win\n%s\n' "$path_line" >> "$zshrc"
+            log "Added ${INSTALL_DIR} to PATH in ${zshrc} (macOS path_helper override)"
         fi
-    done
-
-    printf '\n# Driftr\n%s\n' "$path_line" >> "$profile"
-    log "Added ${INSTALL_DIR} to PATH in ${profile}"
+    fi
 }
 
 main
