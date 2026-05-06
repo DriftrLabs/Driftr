@@ -3,6 +3,9 @@ package installer
 import (
 	"crypto/sha512"
 	"encoding/base64"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -97,6 +100,64 @@ func TestVerifyIntegrity_UnsupportedAlgo(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unsupported algorithm error, got nil")
 	}
+}
+
+func TestListRemoteVersions(t *testing.T) {
+	pkg := registryPackage{
+		Name:     "pnpm",
+		DistTags: map[string]string{"latest": "9.1.0"},
+		Versions: map[string]registryVersion{
+			"9.1.0":      {Version: "9.1.0"},
+			"9.0.0":      {Version: "9.0.0"},
+			"8.15.3":     {Version: "8.15.3"},
+			"9.2.0-rc.0": {Version: "9.2.0-rc.0"},
+			"bad-ver":    {Version: "bad-ver"},
+		},
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(pkg)
+	}))
+	defer srv.Close()
+
+	orig := httpClient
+	httpClient = &http.Client{Transport: &hostRewriteTransport{target: srv.URL}}
+	defer func() { httpClient = orig }()
+
+	t.Run("stable only", func(t *testing.T) {
+		versions, err := ListRemoteVersions("pnpm", false)
+		if err != nil {
+			t.Fatalf("ListRemoteVersions() error: %v", err)
+		}
+		// Expect 3 stable versions, sorted descending, rc excluded.
+		if len(versions) != 3 {
+			t.Fatalf("expected 3 stable versions, got %d: %v", len(versions), versions)
+		}
+		if versions[0] != "9.1.0" {
+			t.Errorf("versions[0] = %q, want 9.1.0", versions[0])
+		}
+		if versions[1] != "9.0.0" {
+			t.Errorf("versions[1] = %q, want 9.0.0", versions[1])
+		}
+		if versions[2] != "8.15.3" {
+			t.Errorf("versions[2] = %q, want 8.15.3", versions[2])
+		}
+	})
+
+	t.Run("include pre-release", func(t *testing.T) {
+		versions, err := ListRemoteVersions("pnpm", true)
+		if err != nil {
+			t.Fatalf("ListRemoteVersions() error: %v", err)
+		}
+		// bad-ver cannot be parsed, so 4 valid versions (3 stable + 1 rc).
+		if len(versions) != 4 {
+			t.Fatalf("expected 4 versions, got %d: %v", len(versions), versions)
+		}
+		// rc should be first since 9.2.0 > 9.1.0.
+		if versions[0] != "9.2.0-rc.0" {
+			t.Errorf("versions[0] = %q, want 9.2.0-rc.0", versions[0])
+		}
+	})
 }
 
 func TestVersionCompare(t *testing.T) {

@@ -68,6 +68,7 @@ pnpm -v   # resolves automatically
 | `driftr default <tool@version>` | Set the global default version for a tool |
 | `driftr pin <tool@version>` | Pin a version to the current project (`.driftr.toml` or `package.json`) |
 | `driftr list [tool]` | List installed versions (defaults to node) |
+| `driftr list --remote [tool]` | Browse available remote versions from nodejs.org / npm registry |
 | `driftr which <tool>` | Show which binary would be executed and why |
 | `driftr run --node <ver> -- <cmd>` | Run a command under a specific Node.js version |
 | `driftr setup` | Initialize Driftr and generate shims |
@@ -77,6 +78,17 @@ pnpm -v   # resolves automatically
 | `driftr doctor [--fix]` | Check your Driftr installation for common problems |
 
 All commands support `-v` / `--verbose` for detailed output including resolver tracing and checksum details.
+
+### Remote version listing flags
+
+```bash
+driftr list --remote [tool]          # Show available versions (default: latest 30)
+driftr list --remote --limit 10      # Limit output to 10 versions
+driftr list --remote --limit 0       # Show all versions (can be 500+ for node)
+driftr list --remote --pre pnpm      # Include pre-release versions (npm packages only)
+```
+
+Installed versions are marked with `●`, the active version with `>`, and the global default with `*`. Node.js LTS releases show their codename (e.g. `LTS: Jod`).
 
 ## Shell Completions
 
