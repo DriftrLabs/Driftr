@@ -153,7 +153,7 @@ func Install(versionStr string, verbose bool) (string, error) {
 // resolveLatestVersion finds the latest Node.js release matching a partial version.
 // The release index is sorted newest-first, so the first match is the latest.
 func resolveLatestVersion(v version.Version) (string, error) {
-	releases, err := fetchNodeIndex()
+	releases, err := FetchNodeIndex()
 	if err != nil {
 		return "", err
 	}
@@ -184,7 +184,9 @@ func ListInstalledToolVersions(tool string) ([]string, error) {
 	return platform.ListToolVersions(tool)
 }
 
-func fetchNodeIndex() ([]NodeRelease, error) {
+// FetchNodeIndex fetches the full Node.js release list from nodejs.org.
+// Releases are returned sorted newest-first. Version strings have the "v" prefix stripped.
+func FetchNodeIndex() ([]NodeRelease, error) {
 	resp, err := httpClient.Get(nodeIndexURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Node.js release index: %w", err)
@@ -200,7 +202,6 @@ func fetchNodeIndex() ([]NodeRelease, error) {
 		return nil, fmt.Errorf("failed to parse release index: %w", err)
 	}
 
-	// Strip "v" prefix from versions.
 	for i := range releases {
 		releases[i].Version = strings.TrimPrefix(releases[i].Version, "v")
 	}

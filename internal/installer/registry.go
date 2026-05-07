@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/DriftrLabs/driftr/internal/ioutil"
@@ -116,6 +117,61 @@ func ResolveRegistryLatest(pkg string, v version.Version) (string, error) {
 		return "", fmt.Errorf("no %s version found matching %s", pkg, v.Raw)
 	}
 	return best.String(), nil
+}
+
+// ListRemoteVersions returns available versions of an npm package sorted newest-first.
+// Pre-release versions (those containing "-" in the version string) are excluded unless
+// includePre is true. Versions that cannot be parsed as semver are silently skipped.
+func ListRemoteVersions(pkg string, includePre bool) ([]string, error) {
+	url := fmt.Sprintf("%s/%s", registryBaseURL, pkg)
+	resp, err := httpClient.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch %s from registry: %w", pkg, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("npm registry returned status %d for %s", resp.StatusCode, pkg)
+	}
+
+	var rp registryPackage
+	if err := json.NewDecoder(resp.Body).Decode(&rp); err != nil {
+		return nil, fmt.Errorf("failed to parse registry response for %s: %w", pkg, err)
+	}
+
+	type entry struct {
+		ver version.Version
+		raw string
+	}
+	var entries []entry
+
+	for verStr := range rp.Versions {
+		isPre := strings.Contains(verStr, "-")
+		if !includePre && isPre {
+			continue
+		}
+		// Strip pre-release suffix before parsing so version.Parse succeeds
+		// (e.g. "9.2.0-rc.0" → parse "9.2.0" for sorting, keep original as raw).
+		parseStr := verStr
+		if isPre {
+			parseStr = verStr[:strings.Index(verStr, "-")]
+		}
+		v, err := version.Parse(parseStr)
+		if err != nil {
+			continue
+		}
+		entries = append(entries, entry{ver: v, raw: verStr})
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return versionCompare(entries[i].ver, entries[j].ver) > 0
+	})
+
+	result := make([]string, len(entries))
+	for i, e := range entries {
+		result[i] = e.raw
+	}
+	return result, nil
 }
 
 // versionCompare returns a positive value if a > b, negative if a < b, zero if equal.
