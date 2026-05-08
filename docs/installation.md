@@ -37,6 +37,59 @@ DRIFTR_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/D
 wget -qO- https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
 ```
 
+## Homebrew (macOS and Linux)
+
+```bash
+brew tap DriftrLabs/driftr
+brew install driftr
+```
+
+### Required post-install steps
+
+Homebrew places the `driftr` binary in `/opt/homebrew/bin/driftr` (Apple Silicon) or `/usr/local/bin/driftr` (Intel). Two additional steps are required before Driftr works:
+
+**Step 1 — Create shims and data directories:**
+
+```bash
+driftr setup
+```
+
+**Step 2 — Configure PATH ordering:**
+
+Driftr's shims (`node`, `npm`, `pnpm`, `yarn`) live in `~/.driftr/bin/`. For version pinning to work, this directory must appear **before** Homebrew paths in `PATH`.
+
+On macOS, `/usr/libexec/path_helper` runs at login shell startup and pushes `/opt/homebrew/bin` to the front, which causes Homebrew's system `node` (if installed) to shadow Driftr's shims. To fix this, add the PATH export to files sourced *after* `path_helper`:
+
+**Zsh** — add to both `~/.zshenv` and `~/.zprofile`:
+
+```bash
+echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv
+echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zprofile
+```
+
+**Bash** — add to `~/.bash_profile`:
+
+```bash
+echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.bash_profile
+```
+
+Or run `driftr doctor --fix` to configure PATH automatically for your shell. Run `driftr doctor` to verify your setup.
+
+### Upgrading
+
+```bash
+brew upgrade driftr
+```
+
+### Uninstalling via Homebrew
+
+```bash
+brew uninstall driftr
+rm -rf ~/.driftr
+```
+
+---
+
 ## Building from Source
 
 Driftr is written in Go. You need Go 1.26 or later to build it.
@@ -100,15 +153,15 @@ echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv
 `.zshenv` is sourced by every zsh invocation — interactive shells, scripts, cron, and IDE
 terminals. Do not use `.zshrc`, which is only sourced for interactive shells.
 
-> **macOS note:** On macOS, `/etc/zprofile` runs `/usr/libexec/path_helper` after `~/.zshenv`
-> is sourced for login shells (Terminal.app and iTerm2 open login shells by default).
-> `path_helper` rebuilds PATH putting `/usr/local/bin` (Intel Homebrew) or `/opt/homebrew/bin`
-> (Apple Silicon) first, which can shadow the driftr shim. To guarantee driftr wins, also add
-> the export to `~/.zprofile` so it runs after `path_helper`:
+> **macOS note:** Login shells invoke `/usr/libexec/path_helper`, which reorders PATH and pushes
+> Homebrew (`/opt/homebrew/bin`) to the front. To guarantee Driftr wins, also add the export to
+> `~/.zprofile` (runs after `path_helper`):
 >
 > ```bash
 > echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zprofile
 > ```
+>
+> See the [Homebrew section](#homebrew-macos-and-linux) above for a detailed explanation.
 
 ### Bash (~/.bash_profile)
 

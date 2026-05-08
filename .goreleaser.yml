@@ -22,6 +22,36 @@ archives:
     name_template: >-
       driftr_{{ .Version }}_{{ .Os }}_{{ .Arch }}
 
+brews:
+  - name: driftr
+    repository:
+      owner: DriftrLabs
+      name: homebrew-driftr
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/DriftrLabs/driftr"
+    description: "Fast JavaScript toolchain versioning without the friction"
+    license: "MIT"
+    skip_upload: auto
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "chore: update driftr formula to {{ .Tag }}"
+    install: |
+      bin.install "driftr"
+    caveats: |
+      Run setup to create shims and data directories:
+        driftr setup
+
+      Add ~/.driftr/bin to the FRONT of your PATH (before Homebrew):
+        echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv
+        echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zprofile
+
+      Or run `driftr doctor --fix` to configure PATH automatically.
+    test: |
+      assert_match version.to_s, shell_output("#{bin}/driftr --version")
+
 checksum:
   name_template: checksums.txt
   algorithm: sha256

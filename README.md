@@ -31,11 +31,22 @@ Driftr is a new project. It doesn't have Volta's years of polish or fnm's commun
 
 ## Install
 
+### Homebrew (macOS and Linux)
+
+```bash
+brew tap DriftrLabs/driftr
+brew install driftr
+```
+
+After installing, run `driftr setup` and add `~/.driftr/bin` to the front of your PATH. See [docs/installation.md](docs/installation.md) for the required PATH setup and why it matters on macOS.
+
+### Quick Install (curl)
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
 ```
 
-This downloads the latest release, verifies its checksum, and configures your PATH. See [docs/installation.md](docs/installation.md) for alternative methods.
+This downloads the latest release, verifies its checksum, and configures your PATH automatically. See [docs/installation.md](docs/installation.md) for all installation methods.
 
 ## Quick Start
 
