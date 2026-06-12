@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,6 +41,16 @@ func DownloadURL(version string) string {
 func ArchiveFilename(version string) string {
 	return fmt.Sprintf("node-v%s-%s-%s.%s",
 		version, platform.OS(), platform.Arch(), platform.ArchiveExt())
+}
+
+// removeCorruptArchive deletes a cached archive that failed verification.
+// If removal fails, the corrupt archive would be reused on every subsequent
+// attempt, so the failure is surfaced with a manual remediation hint.
+func removeCorruptArchive(archivePath string, cause error) error {
+	if err := os.Remove(archivePath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w (failed to remove corrupt archive; run `rm %q` and retry)", cause, archivePath)
+	}
+	return cause
 }
 
 // Download fetches the Node.js archive to the cache directory.
@@ -103,7 +114,11 @@ func Download(version string, verbose bool, cleanup *installCleanup) (string, er
 	} else {
 		_, err = io.Copy(tmpFile, limited)
 	}
-	tmpFile.Close()
+	// A failed close means a truncated file; it must not be renamed into the
+	// cache, where it would be treated as a valid archive.
+	if cerr := tmpFile.Close(); err == nil {
+		err = cerr
+	}
 	if err != nil {
 		os.Remove(tmpPath)
 		if cleanup != nil {

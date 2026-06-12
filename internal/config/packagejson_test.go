@@ -391,3 +391,23 @@ func TestSavePackageJSON_PreservesIndentation(t *testing.T) {
 		t.Errorf("expected driftr key to use same 4-space indentation:\n%s", data)
 	}
 }
+
+func TestSavePackageJSONTool_MalformedDriftrKey(t *testing.T) {
+	dir := t.TempDir()
+	original := `{"name": "myapp", "driftr": {"node": 22, "pnpm": "9.15.0"}}`
+	writePackageJSON(t, dir, original)
+
+	err := SavePackageJSONTool(dir, "yarn", "4.5.0")
+	if err == nil {
+		t.Fatal("expected error for malformed driftr key, got nil")
+	}
+
+	// The file must be left untouched so no pinned tools are lost.
+	data, readErr := os.ReadFile(filepath.Join(dir, "package.json"))
+	if readErr != nil {
+		t.Fatalf("unexpected error: %v", readErr)
+	}
+	if string(data) != original {
+		t.Errorf("package.json was modified despite parse error:\ngot:  %s\nwant: %s", data, original)
+	}
+}

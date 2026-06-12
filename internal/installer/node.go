@@ -134,7 +134,7 @@ func Install(versionStr string, verbose bool) (string, error) {
 
 	if err := VerifyChecksum(archivePath, resolvedVersion, verbose); err != nil {
 		// Remove corrupted cached archive so next attempt re-downloads.
-		os.Remove(archivePath)
+		err = removeCorruptArchive(archivePath, err)
 		cleanup.run()
 		return "", err
 	}

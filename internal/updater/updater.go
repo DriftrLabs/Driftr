@@ -147,7 +147,6 @@ func downloadFile(url, dest string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	limited := io.LimitReader(resp.Body, maxUpdaterDownloadBytes)
 	if ioutil.IsTerminal(os.Stderr) {
@@ -156,6 +155,10 @@ func downloadFile(url, dest string) error {
 		pw.Finish()
 	} else {
 		_, err = io.Copy(f, limited)
+	}
+	// Close errors matter here: a failed flush means a truncated download.
+	if cerr := f.Close(); err == nil {
+		err = cerr
 	}
 	return err
 }
@@ -234,7 +237,10 @@ func extractBinary(archivePath, destPath string) error {
 				out.Close()
 				return err
 			}
-			out.Close()
+			// A failed close means a truncated binary on disk.
+			if err := out.Close(); err != nil {
+				return err
+			}
 			return nil
 		}
 	}
