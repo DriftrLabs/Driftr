@@ -77,11 +77,18 @@ func Extract(archivePath, version string, verbose bool) error {
 		return nil
 	}
 
-	tmpDir := fmt.Sprintf("%s.tmp-%d", destDir, os.Getpid())
-	os.RemoveAll(tmpDir) // clear stale tmp from prior crash with same PID
-
-	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(destDir), 0o755); err != nil {
+		return fmt.Errorf("failed to create tools dir: %w", err)
+	}
+	// MkdirTemp guarantees a unique name, so concurrent installs of the same
+	// version cannot clobber each other's work dir.
+	tmpDir, err := os.MkdirTemp(filepath.Dir(destDir), filepath.Base(destDir)+".tmp-")
+	if err != nil {
 		return fmt.Errorf("failed to create version dir: %w", err)
+	}
+	if err := os.Chmod(tmpDir, 0o755); err != nil {
+		os.RemoveAll(tmpDir)
+		return fmt.Errorf("failed to set version dir permissions: %w", err)
 	}
 
 	if verbose {
