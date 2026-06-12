@@ -48,7 +48,7 @@ func ArchiveFilename(version string) string {
 // attempt, so the failure is surfaced with a manual remediation hint.
 func removeCorruptArchive(archivePath string, cause error) error {
 	if err := os.Remove(archivePath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("%w (failed to remove corrupt archive; run 'rm %s' and retry)", cause, archivePath)
+		return fmt.Errorf("%w (failed to remove corrupt archive; run `rm %q` and retry)", cause, archivePath)
 	}
 	return cause
 }
