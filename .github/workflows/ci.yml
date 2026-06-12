@@ -69,6 +69,23 @@ jobs:
       - name: Run shellcheck
         run: shellcheck install.sh test.sh test_path_e2e.sh scripts/*.sh
 
+  install-sh-smoke:
+    name: install.sh smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run install.sh end-to-end against latest release
+        run: |
+          docker run --rm -v "$PWD:/src:ro" debian:bookworm-slim sh -c '
+            apt-get update -qq >/dev/null 2>&1
+            apt-get install -y -qq ca-certificates curl >/dev/null 2>&1
+            sh /src/install.sh || exit 1
+            export PATH="$HOME/.driftr/bin:$PATH"
+            driftr --version || exit 1
+            test -x "$HOME/.driftr/bin/node" || { echo "node shim missing"; exit 1; }
+          '
+
   test:
     name: Test (${{ matrix.os }})
     strategy:
