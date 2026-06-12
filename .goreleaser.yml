@@ -56,19 +56,18 @@ checksum:
   name_template: checksums.txt
   algorithm: sha256
 
-# Keyless (Sigstore) signature of the checksums file. Verify with:
-#   cosign verify-blob --certificate checksums.txt.pem \
-#     --signature checksums.txt.sig \
+# Keyless (Sigstore) signature of the checksums file, in the cosign v3
+# bundle format. Verify with:
+#   cosign verify-blob --bundle checksums.txt.sigstore.json \
 #     --certificate-identity-regexp 'github.com/DriftrLabs/driftr' \
 #     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
 #     checksums.txt
 signs:
   - cmd: cosign
-    certificate: "${artifact}.pem"
+    signature: "${artifact}.sigstore.json"
     args:
       - sign-blob
-      - "--output-certificate=${certificate}"
-      - "--output-signature=${signature}"
+      - "--bundle=${signature}"
       - "${artifact}"
       - "--yes"
     artifacts: checksum
