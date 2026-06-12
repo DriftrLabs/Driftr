@@ -13,6 +13,10 @@
   The spiritual successor to <a href="https://github.com/volta-cli/volta/issues/2080">Volta</a>, made for developers by developers.
 </p>
 
+<p align="center">
+  <a href="https://codecov.io/gh/DriftrLabs/Driftr"><img src="https://codecov.io/gh/DriftrLabs/Driftr/branch/main/graph/badge.svg" alt="codecov" /></a>
+</p>
+
 ---
 
 ## Why Driftr?
