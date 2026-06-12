@@ -103,7 +103,11 @@ func Download(version string, verbose bool, cleanup *installCleanup) (string, er
 	} else {
 		_, err = io.Copy(tmpFile, limited)
 	}
-	tmpFile.Close()
+	// A failed close means a truncated file; it must not be renamed into the
+	// cache, where it would be treated as a valid archive.
+	if cerr := tmpFile.Close(); err == nil {
+		err = cerr
+	}
 	if err != nil {
 		os.Remove(tmpPath)
 		if cleanup != nil {
