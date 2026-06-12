@@ -193,8 +193,30 @@ Group tests under numbered section headers to keep them organized.
 ### Larger Features
 
 - Windows support (`.cmd` shims, `.zip` extraction)
-- Mirror configuration for custom download sources
 - yarn berry (3+/4+) support
+
+## Release Process (maintainers)
+
+Releases are fully automated — no version bump in source; build metadata is
+injected via ldflags.
+
+```bash
+git checkout main && git pull
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+The tag push triggers `.github/workflows/release.yml`, which:
+
+1. Runs the full test suite (a failing suite blocks the release)
+2. Runs GoReleaser: builds linux/darwin × amd64/arm64 archives, generates
+   `checksums.txt`, signs it with keyless cosign, publishes the GitHub
+   release, and updates the Homebrew tap formula
+3. Attests build provenance for all artifacts (verify with
+   `gh attestation verify`)
+
+Nightly pre-releases build automatically from main at 02:00 UTC when new
+commits exist.
 
 ## Reporting Bugs
 
