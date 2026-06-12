@@ -201,10 +201,11 @@ func validateTarballURL(rawURL string) error {
 		return fmt.Errorf("invalid registry base URL: %w", err)
 	}
 	if u.Scheme != "https" {
-		return fmt.Errorf("refusing non-HTTPS tarball URL from registry metadata: %s", rawURL)
+		return fmt.Errorf("refusing non-HTTPS tarball URL from registry metadata: %q", rawURL)
 	}
-	if u.Host != registry.Host {
-		return fmt.Errorf("refusing tarball URL from unexpected host %q (expected %q): %s", u.Host, registry.Host, rawURL)
+	// DNS hostnames are case-insensitive.
+	if !strings.EqualFold(u.Host, registry.Host) {
+		return fmt.Errorf("refusing tarball URL from unexpected host %q (expected %q): %q", u.Host, registry.Host, rawURL)
 	}
 	return nil
 }
