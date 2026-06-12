@@ -17,6 +17,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -44,6 +45,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -62,6 +64,7 @@ jobs:
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [test]
     steps:
       - uses: actions/checkout@v6
@@ -73,6 +76,7 @@ jobs:
   path-e2e-docker:
     name: PATH e2e (${{ matrix.shell }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [test]
     strategy:
       fail-fast: false
@@ -99,6 +103,7 @@ jobs:
   path-e2e-alpine:
     name: PATH e2e (alpine/musl)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [test]
     steps:
       - uses: actions/checkout@v6
@@ -118,6 +123,7 @@ jobs:
   path-e2e-macos:
     name: PATH e2e (macOS)
     runs-on: macos-latest
+    timeout-minutes: 20
     needs: [test]
     steps:
       - uses: actions/checkout@v6
