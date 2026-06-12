@@ -94,6 +94,9 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # Codecov OIDC upload
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -102,12 +105,12 @@ jobs:
           cache: true
       - name: Run unit tests
         run: go test -race -coverprofile=coverage.txt ./...
-      - name: Upload coverage
+      - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v7
+        uses: codecov/codecov-action@v5
         with:
-          name: coverage
-          path: coverage.txt
+          files: coverage.txt
+          use_oidc: true
 
   integration-test:
     name: Integration Tests
