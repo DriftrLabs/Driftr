@@ -37,6 +37,8 @@ jobs:
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.11
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
   test:
     name: Test (${{ matrix.os }})
