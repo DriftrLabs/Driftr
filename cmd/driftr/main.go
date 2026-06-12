@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -18,6 +19,10 @@ func main() {
 		if err != nil {
 			rb, err = cli.HandleShimError(err, tool)
 			if err != nil {
+				var exitErr *cli.ExitError
+				if errors.As(err, &exitErr) {
+					os.Exit(exitErr.Code)
+				}
 				fmt.Fprintf(os.Stderr, "driftr: %s\n", err)
 				os.Exit(1)
 			}
