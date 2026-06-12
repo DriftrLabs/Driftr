@@ -85,9 +85,12 @@ func SavePackageJSONTool(dir, tool, version string) error {
 		return fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	// Load existing driftr config to preserve other tools.
+	// Load existing driftr config to preserve other tools. A parse failure
+	// must abort: writing with an empty config would drop other pinned tools.
 	var existing PackageJSON
-	_ = json.Unmarshal(data, &existing)
+	if err := json.Unmarshal(data, &existing); err != nil {
+		return fmt.Errorf("failed to parse %s: %w. Fix the file and retry", path, err)
+	}
 	existing.Driftr.SetTool(tool, version)
 
 	driftrValue, err := json.Marshal(existing.Driftr)
