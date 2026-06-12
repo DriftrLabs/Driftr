@@ -194,6 +194,7 @@ configure_path() {
             return
         fi
         mkdir -p "$fish_conf_dir"
+        # shellcheck disable=SC2016  # $PATH must stay literal; fish expands it at runtime
         printf '# Driftr\nset -gx PATH %s $PATH\n' "$INSTALL_DIR" >> "$fish_profile"
         log "Added ${INSTALL_DIR} to PATH in ${fish_profile}"
         return

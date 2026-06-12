@@ -9,9 +9,11 @@ fi
 pkgs="$1"
 if command -v apt-get > /dev/null 2>&1; then
     # libatomic1: required by Node.js binaries on ARM64 Debian
+    # shellcheck disable=SC2086  # $pkgs is an intentionally split package list
     apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libatomic1 $pkgs
     rm -rf /var/lib/apt/lists/*
 elif command -v apk > /dev/null 2>&1; then
+    # shellcheck disable=SC2086  # $pkgs is an intentionally split package list
     apk add --no-cache ca-certificates curl $pkgs
 else
     printf 'error: no supported package manager found\n' >&2

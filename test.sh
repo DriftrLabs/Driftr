@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2088  # tildes appear only in human-readable check labels
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -83,14 +84,14 @@ echo
 
 # ── 5. Pin ────────────────────────────────────
 echo -e "${BLUE}[5] Project Pinning${NC}"
-mkdir -p /tmp/test-project && cd /tmp/test-project
+mkdir -p /tmp/test-project && cd /tmp/test-project || exit 1
 
 check "driftr pin node@$INSTALLED succeeds" driftr pin "node@$INSTALLED"
 check ".driftr.toml was created" test -f /tmp/test-project/.driftr.toml
 check_output ".driftr.toml contains version" "$INSTALLED" cat /tmp/test-project/.driftr.toml
 check_output "which shows project source" "project config" driftr which node
 
-cd /home/driftr
+cd /home/driftr || exit 1
 echo
 
 # ── 6. Resolver Tracing ──────────────────────
@@ -127,12 +128,12 @@ echo
 
 # ── 11. Multi-tool Config ───────────────────
 echo -e "${BLUE}[11] Multi-tool Config${NC}"
-mkdir -p /tmp/test-multitool && cd /tmp/test-multitool
+mkdir -p /tmp/test-multitool && cd /tmp/test-multitool || exit 1
 
 # Pin node in .driftr.toml then verify multiple tools work in same config.
 check "pin node in multi-tool project" driftr pin "node@$INSTALLED"
 check_output ".driftr.toml has node version" "$INSTALLED" cat /tmp/test-multitool/.driftr.toml
-cd /home/driftr
+cd /home/driftr || exit 1
 echo
 
 # ── 12. Error Cases ─────────────────────────

@@ -65,6 +65,7 @@ configure_path_for() {
         export INSTALL_DIR
         SHELL="$shell_bin"
         export SHELL
+        # shellcheck source=/dev/null
         . "$PATCHED_INSTALL"
         configure_path
     )

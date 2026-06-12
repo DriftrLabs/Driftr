@@ -40,6 +40,15 @@ jobs:
       - name: Run govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run shellcheck
+        run: shellcheck install.sh test.sh test_path_e2e.sh scripts/*.sh
+
   test:
     name: Test (${{ matrix.os }})
     strategy:
