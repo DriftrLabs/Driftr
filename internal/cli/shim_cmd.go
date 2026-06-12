@@ -70,7 +70,9 @@ func HandleShimError(err error, tool string) (*resolver.ResolvedBinary, error) {
 	}
 
 	if !promptInstall(notInstalled) {
-		os.Exit(1)
+		// User declined — fail quietly with a non-zero code; the prompt
+		// already explained the situation.
+		return nil, &ExitError{Code: 1}
 	}
 
 	return autoInstall(notInstalled, tool)

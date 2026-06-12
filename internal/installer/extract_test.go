@@ -290,3 +290,26 @@ func TestRemoveCorruptArchive_Undeletable(t *testing.T) {
 		t.Errorf("expected remediation hint in error, got: %v", err)
 	}
 }
+
+func TestExtract_WrongArchiveLayout(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	const ver = "99.0.0"
+
+	// No entry carries the expected node-v<ver>-<os>-<arch>/ prefix.
+	archive := buildTarGz(t, []tarEntry{
+		{Name: "something-else/bin/node", Data: []byte("node"), Typeflag: tar.TypeReg},
+	})
+
+	err := Extract(archive, ver, false)
+	if err == nil || !strings.Contains(err.Error(), "unexpected layout") {
+		t.Fatalf("expected unexpected-layout error, got: %v", err)
+	}
+
+	destDir, err := platform.NodeVersionDir(ver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, statErr := os.Stat(destDir); !errors.Is(statErr, os.ErrNotExist) {
+		t.Errorf("version dir left behind after layout error: %s", destDir)
+	}
+}

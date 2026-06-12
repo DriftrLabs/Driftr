@@ -46,7 +46,7 @@ brews:
 
       Add ~/.driftr/bin to the FRONT of your PATH (before Homebrew):
         echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv
-        echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zprofile
+        echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshrc
 
       Or run `driftr doctor --fix` to configure PATH automatically.
     test: |

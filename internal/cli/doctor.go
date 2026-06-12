@@ -162,7 +162,11 @@ func checkShimBinaryPath(binDir string) int {
 	if err != nil {
 		return 0
 	}
-	currentBin, _ = filepath.EvalSymlinks(currentBin)
+	// Keep the unresolved path on error — overwriting with "" would make the
+	// comparison below always mismatch and produce a false warning.
+	if resolved, err := filepath.EvalSymlinks(currentBin); err == nil {
+		currentBin = resolved
+	}
 
 	shimPath := filepath.Join(binDir, "node")
 	data, err := os.ReadFile(shimPath)
@@ -175,8 +179,8 @@ func checkShimBinaryPath(binDir string) int {
 		rest := content[idx+len(shimExecPrefix):]
 		if end := strings.Index(rest, "\""); end >= 0 {
 			shimBin := rest[:end]
-			resolved, _ := filepath.EvalSymlinks(shimBin)
-			if resolved == "" {
+			resolved, err := filepath.EvalSymlinks(shimBin)
+			if err != nil || resolved == "" {
 				resolved = shimBin
 			}
 			if resolved != currentBin {

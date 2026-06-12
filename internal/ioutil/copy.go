@@ -1,6 +1,7 @@
 package ioutil
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -17,8 +18,13 @@ func CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
 
-	_, err = io.Copy(out, in)
-	return err
+	if _, err := io.Copy(out, in); err != nil {
+		if cerr := out.Close(); cerr != nil {
+			return fmt.Errorf("copy failed: %w; close failed: %w", err, cerr)
+		}
+		return err
+	}
+	// A failed close means a truncated copy.
+	return out.Close()
 }

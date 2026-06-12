@@ -212,3 +212,21 @@ func TestValidateTarballURL(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistryBase_EnvOverride(t *testing.T) {
+	t.Setenv("DRIFTR_NPM_REGISTRY", "http://127.0.0.1:9123/")
+	if got := registryBase(); got != "http://127.0.0.1:9123" {
+		t.Errorf("registryBase() = %q, want trailing slash trimmed", got)
+	}
+}
+
+func TestValidateTarballURL_CustomRegistry(t *testing.T) {
+	t.Setenv("DRIFTR_NPM_REGISTRY", "http://127.0.0.1:9123")
+
+	if err := validateTarballURL("http://127.0.0.1:9123/pnpm/-/pnpm-9.1.0.tgz"); err != nil {
+		t.Errorf("tarball URL matching custom registry rejected: %v", err)
+	}
+	if err := validateTarballURL("https://registry.npmjs.org/pnpm/-/pnpm-9.1.0.tgz"); err == nil {
+		t.Error("tarball URL from a different host than the configured registry must be rejected")
+	}
+}

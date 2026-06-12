@@ -49,9 +49,11 @@ func newCacheCleanCmd() *cobra.Command {
 			}
 
 			var totalSize int64
+			unsized := 0
 			for _, entry := range entries {
 				info, err := entry.Info()
 				if err != nil {
+					unsized++
 					continue
 				}
 				totalSize += info.Size()
@@ -61,7 +63,11 @@ func newCacheCleanCmd() *cobra.Command {
 				return fmt.Errorf("failed to clean cache: %w", err)
 			}
 
-			fmt.Printf("Removed %d cached file(s), freed %s.\n", len(entries), formatSize(totalSize))
+			summary := fmt.Sprintf("Removed %d cached file(s), freed %s", len(entries), formatSize(totalSize))
+			if unsized > 0 {
+				summary += fmt.Sprintf(" (size of %d file(s) unknown)", unsized)
+			}
+			fmt.Println(summary + ".")
 			return nil
 		},
 	}

@@ -103,9 +103,16 @@ verify_checksum() {
     checksums_file="$2"
     filename="$(basename "$archive")"
 
-    expected=$(grep "$filename" "$checksums_file" | awk '{print $1}')
+    # Exact second-field match — a substring grep could match the wrong line.
+    expected=$(awk -v f="$filename" 'NF == 2 && $2 == f { print $1; exit }' "$checksums_file")
     if [ -z "$expected" ]; then
         err "no checksum found for $filename in checksums.txt"
+    fi
+    case "$expected" in
+        *[!0-9a-f]*) err "malformed checksum for $filename in checksums.txt" ;;
+    esac
+    if [ "${#expected}" -ne 64 ]; then
+        err "malformed checksum for $filename in checksums.txt"
     fi
 
     if command -v sha256sum >/dev/null 2>&1; then

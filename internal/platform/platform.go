@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // DriftrHome returns the root directory for Driftr storage (~/.driftr).
@@ -194,7 +195,8 @@ func ListToolVersions(tool string) ([]string, error) {
 
 	var versions []string
 	for _, e := range entries {
-		if e.IsDir() {
+		// Skip in-progress or stale extraction work dirs (<version>.tmp-XXXX).
+		if e.IsDir() && !strings.Contains(e.Name(), ".tmp-") {
 			versions = append(versions, e.Name())
 		}
 	}

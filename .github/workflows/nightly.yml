@@ -34,6 +34,16 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+          # Capture the commit range now — the tag is deleted before release creation.
+          {
+            echo "changes<<CHANGES_EOF"
+            if [ "$prev" != "none" ]; then
+              git log --oneline --no-decorate "$prev"..HEAD | head -30
+            else
+              git log --oneline --no-decorate -10
+            fi
+            echo "CHANGES_EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Run tests
         if: steps.newcommits.outputs.skip != 'true'
@@ -64,6 +74,11 @@ jobs:
             --notes "Automated nightly build from \`$(git rev-parse --short HEAD)\` on main.
 
           **This is an unstable pre-release. Not recommended for production use.**
+
+          Changes since the previous nightly:
+          \`\`\`
+          ${{ steps.newcommits.outputs.changes }}
+          \`\`\`
 
           Install: download the archive for your platform, extract, and place \`driftr\` on your PATH." \
             --prerelease

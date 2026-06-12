@@ -73,7 +73,7 @@ func newUninstallCmd() *cobra.Command {
 			}
 
 			if err := os.RemoveAll(versionDir); err != nil {
-				return fmt.Errorf("failed to remove %s %s: %w", tool, versionStr, err)
+				return fmt.Errorf("failed to remove %s %s: %w. Manual cleanup: rm -rf %q", tool, versionStr, err, versionDir)
 			}
 
 			fmt.Printf("Uninstalled %s %s\n", tool, versionStr)

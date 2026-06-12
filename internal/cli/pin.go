@@ -152,7 +152,9 @@ func migratePin(dir, tool, versionStr string, current pinFormat) error {
 		if err := config.SavePackageJSONTool(dir, tool, versionStr); err != nil {
 			return err
 		}
-		os.Remove(filepath.Join(dir, config.ProjectConfigFile))
+		if err := os.Remove(filepath.Join(dir, config.ProjectConfigFile)); err != nil {
+			return fmt.Errorf("migrated to package.json but failed to remove %s: %w. Remove it manually — it takes precedence over package.json", config.ProjectConfigFile, err)
+		}
 		fmt.Printf("Migrated %s %s from %s to package.json\n", tool, versionStr, config.ProjectConfigFile)
 
 	case formatPackageJSON:

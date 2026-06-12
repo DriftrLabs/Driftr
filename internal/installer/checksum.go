@@ -14,7 +14,7 @@ import (
 
 // ShasumsURL returns the URL for the SHASUMS256.txt file for a given Node.js version.
 func ShasumsURL(version string) string {
-	return fmt.Sprintf("%s/v%s/SHASUMS256.txt", nodeDistBaseURL, version)
+	return fmt.Sprintf("%s/v%s/SHASUMS256.txt", nodeDistBase(), version)
 }
 
 // FetchExpectedChecksum downloads SHASUMS256.txt and extracts the hash for the given filename.

@@ -69,7 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Run shellcheck
-        run: shellcheck install.sh test.sh test_path_e2e.sh scripts/*.sh
+        run: shellcheck install.sh test.sh test_path_e2e.sh scripts/*.sh test/*.sh
 
   install-sh-smoke:
     name: install.sh smoke test

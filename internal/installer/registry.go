@@ -20,7 +20,16 @@ import (
 	"github.com/DriftrLabs/driftr/internal/version"
 )
 
-const registryBaseURL = "https://registry.npmjs.org"
+const defaultRegistryBaseURL = "https://registry.npmjs.org"
+
+// registryBase returns the npm registry base URL. DRIFTR_NPM_REGISTRY
+// overrides the default — for corporate mirrors and hermetic tests.
+func registryBase() string {
+	if m := os.Getenv("DRIFTR_NPM_REGISTRY"); m != "" {
+		return strings.TrimRight(m, "/")
+	}
+	return defaultRegistryBaseURL
+}
 
 const maxRegistryDownloadBytes = 50 * 1024 * 1024 // 50 MB
 
@@ -48,7 +57,7 @@ type registryDist struct {
 
 // FetchRegistryVersion fetches metadata for a specific package version from the npm registry.
 func FetchRegistryVersion(pkg, ver string) (*registryVersion, error) {
-	url := fmt.Sprintf("%s/%s/%s", registryBaseURL, pkg, ver)
+	url := fmt.Sprintf("%s/%s/%s", registryBase(), pkg, ver)
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s@%s from registry: %w", pkg, ver, err)
@@ -72,7 +81,7 @@ func FetchRegistryVersion(pkg, ver string) (*registryVersion, error) {
 // ResolveRegistryLatest finds the latest version of an npm package matching a partial version spec.
 // For "latest" or when no constraint is given, returns the dist-tag "latest".
 func ResolveRegistryLatest(pkg string, v version.Version) (string, error) {
-	url := fmt.Sprintf("%s/%s", registryBaseURL, pkg)
+	url := fmt.Sprintf("%s/%s", registryBase(), pkg)
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch %s from registry: %w", pkg, err)
@@ -124,7 +133,7 @@ func ResolveRegistryLatest(pkg string, v version.Version) (string, error) {
 // Pre-release versions (those containing "-" in the version string) are excluded unless
 // includePre is true. Versions that cannot be parsed as semver are silently skipped.
 func ListRemoteVersions(pkg string, includePre bool) ([]string, error) {
-	url := fmt.Sprintf("%s/%s", registryBaseURL, pkg)
+	url := fmt.Sprintf("%s/%s", registryBase(), pkg)
 	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch %s from registry: %w", pkg, err)
@@ -187,21 +196,22 @@ func versionCompare(a, b version.Version) int {
 }
 
 // validateTarballURL ensures a registry-supplied tarball URL points back at
-// the npm registry over HTTPS. The URL comes from registry metadata, so a
+// the configured npm registry. The URL comes from registry metadata, so a
 // poisoned response could otherwise send the download to an arbitrary host or
 // downgrade it to plaintext HTTP (CheckRedirect only guards redirects, not the
-// initial request).
+// initial request). With the default registry this enforces HTTPS +
+// registry.npmjs.org; a DRIFTR_NPM_REGISTRY override must match itself exactly.
 func validateTarballURL(rawURL string) error {
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return fmt.Errorf("invalid tarball URL in registry metadata: %w", err)
 	}
-	registry, err := url.Parse(registryBaseURL)
+	registry, err := url.Parse(registryBase())
 	if err != nil {
 		return fmt.Errorf("invalid registry base URL: %w", err)
 	}
-	if u.Scheme != "https" {
-		return fmt.Errorf("refusing non-HTTPS tarball URL from registry metadata: %q", rawURL)
+	if u.Scheme != registry.Scheme {
+		return fmt.Errorf("refusing tarball URL with scheme %q (registry uses %q): %q", u.Scheme, registry.Scheme, rawURL)
 	}
 	// DNS hostnames are case-insensitive.
 	if !strings.EqualFold(u.Host, registry.Host) {

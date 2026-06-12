@@ -149,3 +149,13 @@ func TestDownload_EmptyCachedFileRedownloads(t *testing.T) {
 		t.Errorf("zero-byte cache entry was not re-downloaded: got %q", got)
 	}
 }
+
+func TestNodeDistBase_EnvOverride(t *testing.T) {
+	t.Setenv("DRIFTR_NODE_MIRROR", "http://127.0.0.1:9123/")
+	if got := nodeDistBase(); got != "http://127.0.0.1:9123" {
+		t.Errorf("nodeDistBase() = %q, want trailing slash trimmed", got)
+	}
+	if got := DownloadURL("22.0.0"); !strings.HasPrefix(got, "http://127.0.0.1:9123/v22.0.0/") {
+		t.Errorf("DownloadURL did not use mirror: %q", got)
+	}
+}
