@@ -22,10 +22,23 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Check for new commits since last nightly
+        id: newcommits
+        run: |
+          prev=$(git rev-parse 'nightly^{commit}' 2>/dev/null || echo none)
+          if [ "$(git rev-parse HEAD)" = "$prev" ]; then
+            echo "Nightly tag already points at HEAD; skipping rebuild."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run tests
+        if: steps.newcommits.outputs.skip != 'true'
         run: go test -race ./...
 
       - name: Build snapshot
+        if: steps.newcommits.outputs.skip != 'true'
         uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
@@ -34,11 +47,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Delete previous nightly release
+        if: steps.newcommits.outputs.skip != 'true'
         run: gh release delete nightly --yes --cleanup-tag 2>/dev/null || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create nightly release
+        if: steps.newcommits.outputs.skip != 'true'
         run: |
           gh release create nightly dist/*.tar.gz dist/checksums.txt \
             --title "Nightly $(date -u +%Y-%m-%d)" \
