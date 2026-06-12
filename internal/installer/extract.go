@@ -123,6 +123,7 @@ func Extract(archivePath, version string, verbose bool) error {
 
 	// The archive contains "node-v<version>-<os>-<arch>/" as prefix.
 	prefix := fmt.Sprintf("node-v%s-%s-%s/", version, platform.OS(), platform.Arch())
+	matched := false
 
 	for {
 		hdr, err := tr.Next()
@@ -139,6 +140,7 @@ func Extract(archivePath, version string, verbose bool) error {
 		if !strings.HasPrefix(name, prefix) {
 			continue
 		}
+		matched = true
 
 		// Strip the archive prefix to get the relative path.
 		relPath := strings.TrimPrefix(name, prefix)
@@ -151,6 +153,14 @@ func Extract(archivePath, version string, verbose bool) error {
 			os.RemoveAll(tmpDir)
 			return err
 		}
+	}
+
+	// A valid Node.js archive always contains the version-prefixed directory.
+	// No matches means a wrong or corrupted archive, not a partial install.
+	if !matched {
+		root.Close()
+		os.RemoveAll(tmpDir)
+		return fmt.Errorf("archive has unexpected layout: no entries under %q. Run 'driftr cache clean' and retry", prefix)
 	}
 
 	// Verify the node binary exists after extraction.
