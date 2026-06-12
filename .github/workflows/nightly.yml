@@ -44,7 +44,9 @@ jobs:
         uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
         with:
           version: "~> v2"
-          args: release --snapshot --clean
+          # skip=sign: nightly is an unstable prerelease and the job has no
+          # OIDC token for keyless cosign signing.
+          args: release --snapshot --clean --skip=sign
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

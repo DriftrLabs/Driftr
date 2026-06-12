@@ -144,12 +144,18 @@ func TestExtract_PathTraversalBlocked(t *testing.T) {
 	// outside the version directory.
 	_ = Extract(archive, ver, false)
 
-	matches, err := filepath.Glob(filepath.Join(home, "**", "escape.txt"))
+	// filepath.Glob has no recursive **, so walk the whole tree.
+	err := filepath.WalkDir(home, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.Name() == "escape.txt" {
+			t.Errorf("path traversal entry escaped the sandbox: %s", path)
+		}
+		return nil
+	})
 	if err != nil {
 		t.Fatal(err)
-	}
-	if _, statErr := os.Stat(filepath.Join(home, "escape.txt")); !errors.Is(statErr, os.ErrNotExist) || len(matches) > 0 {
-		t.Errorf("path traversal entry escaped the sandbox")
 	}
 }
 
