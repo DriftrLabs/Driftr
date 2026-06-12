@@ -21,7 +21,7 @@ func CopyFile(src, dst string) error {
 
 	if _, err := io.Copy(out, in); err != nil {
 		if cerr := out.Close(); cerr != nil {
-			return fmt.Errorf("copy failed: %w; close failed: %v", err, cerr)
+			return fmt.Errorf("copy failed: %w; close failed: %w", err, cerr)
 		}
 		return err
 	}
