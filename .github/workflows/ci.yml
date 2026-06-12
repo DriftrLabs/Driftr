@@ -99,8 +99,16 @@ jobs:
     needs: [test]
     steps:
       - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
       - name: Build test image
-        run: docker build -f Dockerfile.test -t driftr-test .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.test
+          tags: driftr-test
+          load: true
+          cache-from: type=gha,scope=integration
+          cache-to: type=gha,scope=integration,mode=max
       - name: Run integration tests
         run: docker run --rm driftr-test
 
@@ -121,13 +129,19 @@ jobs:
             shell_pkgs: "fish"
     steps:
       - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
       - name: Build image
-        run: |
-          docker build \
-            --build-arg SHELL_PKGS="${{ matrix.shell_pkgs }}" \
-            --build-arg TEST_SHELL=${{ matrix.shell }} \
-            -f Dockerfile.path-e2e \
-            -t driftr-path-e2e-${{ matrix.shell }} .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.path-e2e
+          tags: driftr-path-e2e-${{ matrix.shell }}
+          load: true
+          build-args: |
+            SHELL_PKGS=${{ matrix.shell_pkgs }}
+            TEST_SHELL=${{ matrix.shell }}
+          cache-from: type=gha,scope=path-e2e-${{ matrix.shell }}
+          cache-to: type=gha,scope=path-e2e-${{ matrix.shell }},mode=max
       - name: Run
         run: docker run --rm driftr-path-e2e-${{ matrix.shell }}
 
@@ -138,14 +152,20 @@ jobs:
     needs: [test]
     steps:
       - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
       - name: Build image
-        run: |
-          docker build \
-            --build-arg BASE_IMAGE=alpine:3.21 \
-            --build-arg SHELL_PKGS="bash zsh fish" \
-            --build-arg TEST_SHELL=bash \
-            -f Dockerfile.path-e2e \
-            -t driftr-path-e2e-alpine .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.path-e2e
+          tags: driftr-path-e2e-alpine
+          load: true
+          build-args: |
+            BASE_IMAGE=alpine:3.21
+            SHELL_PKGS=bash zsh fish
+            TEST_SHELL=bash
+          cache-from: type=gha,scope=path-e2e-alpine
+          cache-to: type=gha,scope=path-e2e-alpine,mode=max
       - name: Run
         # SKIP_SHIM_TESTS: Node.js official binaries are glibc-only and will
         # not exec on musl libc. Phase 1 already proves driftr works on musl.
