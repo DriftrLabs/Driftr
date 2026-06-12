@@ -188,3 +188,26 @@ func TestVersionCompare(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateTarballURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{"valid registry URL", "https://registry.npmjs.org/pnpm/-/pnpm-9.1.0.tgz", false},
+		{"plain HTTP rejected", "http://registry.npmjs.org/pnpm/-/pnpm-9.1.0.tgz", true},
+		{"wrong host rejected", "https://evil.example.com/pnpm-9.1.0.tgz", true},
+		{"host with port rejected", "https://registry.npmjs.org:8443/pnpm.tgz", true},
+		{"unparseable URL rejected", "https://registry.npmjs.org/%zz", true},
+		{"empty URL rejected", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateTarballURL(tt.url)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateTarballURL(%q) error = %v, wantErr %v", tt.url, err, tt.wantErr)
+			}
+		})
+	}
+}

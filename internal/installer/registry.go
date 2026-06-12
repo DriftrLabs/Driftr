@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -185,6 +186,29 @@ func versionCompare(a, b version.Version) int {
 	return cmp.Compare(a.Patch, b.Patch)
 }
 
+// validateTarballURL ensures a registry-supplied tarball URL points back at
+// the npm registry over HTTPS. The URL comes from registry metadata, so a
+// poisoned response could otherwise send the download to an arbitrary host or
+// downgrade it to plaintext HTTP (CheckRedirect only guards redirects, not the
+// initial request).
+func validateTarballURL(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid tarball URL in registry metadata: %w", err)
+	}
+	registry, err := url.Parse(registryBaseURL)
+	if err != nil {
+		return fmt.Errorf("invalid registry base URL: %w", err)
+	}
+	if u.Scheme != "https" {
+		return fmt.Errorf("refusing non-HTTPS tarball URL from registry metadata: %s", rawURL)
+	}
+	if u.Host != registry.Host {
+		return fmt.Errorf("refusing tarball URL from unexpected host %q (expected %q): %s", u.Host, registry.Host, rawURL)
+	}
+	return nil
+}
+
 // DownloadRegistryPackage downloads an npm package tarball to the cache directory.
 // Returns the path to the downloaded file and the registry version metadata.
 func DownloadRegistryPackage(pkg, ver string, verbose bool) (string, *registryVersion, error) {
@@ -214,6 +238,9 @@ func DownloadRegistryPackage(pkg, ver string, verbose bool) (string, *registryVe
 	}
 
 	tarballURL := rv.Dist.Tarball
+	if err := validateTarballURL(tarballURL); err != nil {
+		return "", nil, err
+	}
 	if verbose {
 		fmt.Printf("  Downloading: %s\n", tarballURL)
 	}
