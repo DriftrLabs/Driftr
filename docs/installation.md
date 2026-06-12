@@ -58,13 +58,13 @@ driftr setup
 
 Driftr's shims (`node`, `npm`, `pnpm`, `yarn`) live in `~/.driftr/bin/`. For version pinning to work, this directory must appear **before** Homebrew paths in `PATH`.
 
-On macOS, `/usr/libexec/path_helper` runs at login shell startup and pushes `/opt/homebrew/bin` to the front, which causes Homebrew's system `node` (if installed) to shadow Driftr's shims. To fix this, add the PATH export to files sourced *after* `path_helper`:
+On macOS, `/usr/libexec/path_helper` runs at login shell startup (often together with `brew shellenv` in `~/.zprofile`) and pushes `/opt/homebrew/bin` to the front, which causes Homebrew's system `node` (if installed) to shadow Driftr's shims. To fix this, add the PATH export to a file sourced *after* `path_helper`:
 
-**Zsh** — add to both `~/.zshenv` and `~/.zprofile`:
+**Zsh** — add to both `~/.zshenv` (covers scripts, cron, IDE terminals) and `~/.zshrc` (sourced last in interactive sessions, so the shim dir wins over `path_helper`):
 
 ```bash
 echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv
-echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zprofile
+echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshrc
 ```
 
 **Bash** — add to `~/.bash_profile`:
@@ -151,14 +151,16 @@ echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshenv
 ```
 
 `.zshenv` is sourced by every zsh invocation — interactive shells, scripts, cron, and IDE
-terminals. Do not use `.zshrc`, which is only sourced for interactive shells.
+terminals — and is the primary location. On its own it is not enough for interactive
+shells on macOS, though:
 
 > **macOS note:** Login shells invoke `/usr/libexec/path_helper`, which reorders PATH and pushes
 > Homebrew (`/opt/homebrew/bin`) to the front. To guarantee Driftr wins, also add the export to
-> `~/.zprofile` (runs after `path_helper`):
+> `~/.zshrc` (sourced last in interactive sessions). This matches what `install.sh` and
+> `driftr doctor --fix` configure automatically:
 >
 > ```bash
-> echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zprofile
+> echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshrc
 > ```
 >
 > See the [Homebrew section](#homebrew-macos-and-linux) above for a detailed explanation.
