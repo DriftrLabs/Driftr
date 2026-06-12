@@ -40,6 +40,25 @@ jobs:
       - name: Run govulncheck
         run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
+  cross-compile:
+    name: Cross-compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build all release targets
+        run: |
+          for goos in linux darwin; do
+            for goarch in amd64 arm64; do
+              echo "Building $goos/$goarch"
+              GOOS=$goos GOARCH=$goarch CGO_ENABLED=0 go build -o /dev/null ./cmd/driftr/
+            done
+          done
+
   shellcheck:
     name: ShellCheck
     runs-on: ubuntu-latest
