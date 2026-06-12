@@ -65,6 +65,7 @@ configure_path_for() {
         export INSTALL_DIR
         SHELL="$shell_bin"
         export SHELL
+        # shellcheck source=/dev/null
         . "$PATCHED_INSTALL"
         configure_path
     )
@@ -252,13 +253,13 @@ run_shim_tests() {
 for_each_active_shell() {
     _fn="$1"
     case "${TEST_SHELL:-all}" in
-        zsh)  command -v zsh  > /dev/null 2>&1 && "$_fn" zsh  || printf '[SKIP] zsh not installed\n' ;;
-        bash) command -v bash > /dev/null 2>&1 && "$_fn" bash || printf '[SKIP] bash not installed\n' ;;
-        fish) command -v fish > /dev/null 2>&1 && "$_fn" fish || printf '[SKIP] fish not installed\n' ;;
+        zsh)  if command -v zsh  > /dev/null 2>&1; then "$_fn" zsh;  else printf '[SKIP] zsh not installed\n';  fi ;;
+        bash) if command -v bash > /dev/null 2>&1; then "$_fn" bash; else printf '[SKIP] bash not installed\n'; fi ;;
+        fish) if command -v fish > /dev/null 2>&1; then "$_fn" fish; else printf '[SKIP] fish not installed\n'; fi ;;
         all)
-            command -v zsh  > /dev/null 2>&1 && "$_fn" zsh  || true
-            command -v bash > /dev/null 2>&1 && "$_fn" bash || true
-            command -v fish > /dev/null 2>&1 && "$_fn" fish || true
+            if command -v zsh  > /dev/null 2>&1; then "$_fn" zsh;  fi
+            if command -v bash > /dev/null 2>&1; then "$_fn" bash; fi
+            if command -v fish > /dev/null 2>&1; then "$_fn" fish; fi
             ;;
         *) printf 'error: unknown TEST_SHELL=%s\n' "$TEST_SHELL" >&2; exit 1 ;;
     esac

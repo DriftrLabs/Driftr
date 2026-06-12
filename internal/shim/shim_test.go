@@ -73,3 +73,45 @@ func TestWriteShim_AllTools(t *testing.T) {
 		t.Errorf("missing tool in ShimTools(): %q", tool)
 	}
 }
+
+func TestGenerateShims(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	if err := GenerateShims(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	binDir, err := ShimDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range ShimTools() {
+		shimPath := filepath.Join(binDir, tool)
+		info, err := os.Stat(shimPath)
+		if err != nil {
+			t.Errorf("shim for %s not created: %v", tool, err)
+			continue
+		}
+		if info.Mode().Perm()&0o111 == 0 {
+			t.Errorf("shim for %s is not executable: %v", tool, info.Mode())
+		}
+		content, err := os.ReadFile(shimPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(content), "shim "+tool) {
+			t.Errorf("shim for %s has wrong invocation: %s", tool, content)
+		}
+	}
+}
+
+func TestShimTools_ReturnsCopy(t *testing.T) {
+	tools := ShimTools()
+	if len(tools) == 0 {
+		t.Fatal("expected non-empty tool list")
+	}
+	tools[0] = "mutated"
+	if ShimTools()[0] == "mutated" {
+		t.Error("ShimTools returns a reference to the internal slice; callers can mutate it")
+	}
+}

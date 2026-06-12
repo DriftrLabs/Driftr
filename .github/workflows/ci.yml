@@ -5,6 +5,7 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -17,11 +18,13 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
-          go-version: "1.26"
+          go-version-file: go.mod
+          check-latest: true
           cache: true
       - name: Check formatting
         run: |
@@ -33,9 +36,57 @@ jobs:
           fi
       - name: Check go vet
         run: go vet ./...
-      - uses: golangci/golangci-lint-action@v9
+      - uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9
         with:
           version: v2.11
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.3.0 ./...
+
+  cross-compile:
+    name: Cross-compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          check-latest: true
+          cache: true
+      - name: Build all release targets
+        run: |
+          for goos in linux darwin; do
+            for goarch in amd64 arm64; do
+              echo "Building $goos/$goarch"
+              GOOS=$goos GOARCH=$goarch CGO_ENABLED=0 go build -o /dev/null ./cmd/driftr/
+            done
+          done
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Run shellcheck
+        run: shellcheck install.sh test.sh test_path_e2e.sh scripts/*.sh
+
+  install-sh-smoke:
+    name: install.sh smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Run install.sh end-to-end against latest release
+        run: |
+          docker run --rm -v "$PWD:/src:ro" debian:bookworm-slim sh -c '
+            apt-get update -qq >/dev/null 2>&1
+            apt-get install -y -qq ca-certificates curl >/dev/null 2>&1
+            sh /src/install.sh || exit 1
+            export PATH="$HOME/.driftr/bin:$PATH"
+            driftr --version || exit 1
+            test -x "$HOME/.driftr/bin/node" || { echo "node shim missing"; exit 1; }
+          '
 
   test:
     name: Test (${{ matrix.os }})
@@ -44,35 +95,50 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # Codecov OIDC upload
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
-          go-version: "1.26"
+          go-version-file: go.mod
+          check-latest: true
           cache: true
       - name: Run unit tests
         run: go test -race -coverprofile=coverage.txt ./...
-      - name: Upload coverage
+      - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v7
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
-          name: coverage
-          path: coverage.txt
+          files: coverage.txt
+          use_oidc: true
 
   integration-test:
     name: Integration Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [test]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build test image
-        run: docker build -f Dockerfile.test -t driftr-test .
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: Dockerfile.test
+          tags: driftr-test
+          load: true
+          cache-from: type=gha,scope=integration
+          cache-to: type=gha,scope=integration,mode=max
       - name: Run integration tests
         run: docker run --rm driftr-test
 
   path-e2e-docker:
     name: PATH e2e (${{ matrix.shell }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [test]
     strategy:
       fail-fast: false
@@ -85,31 +151,44 @@ jobs:
           - shell: fish
             shell_pkgs: "fish"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build image
-        run: |
-          docker build \
-            --build-arg SHELL_PKGS="${{ matrix.shell_pkgs }}" \
-            --build-arg TEST_SHELL=${{ matrix.shell }} \
-            -f Dockerfile.path-e2e \
-            -t driftr-path-e2e-${{ matrix.shell }} .
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: Dockerfile.path-e2e
+          tags: driftr-path-e2e-${{ matrix.shell }}
+          load: true
+          build-args: |
+            SHELL_PKGS=${{ matrix.shell_pkgs }}
+            TEST_SHELL=${{ matrix.shell }}
+          cache-from: type=gha,scope=path-e2e-${{ matrix.shell }}
+          cache-to: type=gha,scope=path-e2e-${{ matrix.shell }},mode=max
       - name: Run
         run: docker run --rm driftr-path-e2e-${{ matrix.shell }}
 
   path-e2e-alpine:
     name: PATH e2e (alpine/musl)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [test]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Build image
-        run: |
-          docker build \
-            --build-arg BASE_IMAGE=alpine:3.21 \
-            --build-arg SHELL_PKGS="bash zsh fish" \
-            --build-arg TEST_SHELL=bash \
-            -f Dockerfile.path-e2e \
-            -t driftr-path-e2e-alpine .
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: Dockerfile.path-e2e
+          tags: driftr-path-e2e-alpine
+          load: true
+          build-args: |
+            BASE_IMAGE=alpine:3.21
+            SHELL_PKGS=bash zsh fish
+            TEST_SHELL=bash
+          cache-from: type=gha,scope=path-e2e-alpine
+          cache-to: type=gha,scope=path-e2e-alpine,mode=max
       - name: Run
         # SKIP_SHIM_TESTS: Node.js official binaries are glibc-only and will
         # not exec on musl libc. Phase 1 already proves driftr works on musl.
@@ -118,12 +197,14 @@ jobs:
   path-e2e-macos:
     name: PATH e2e (macOS)
     runs-on: macos-latest
+    timeout-minutes: 20
     needs: [test]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
-          go-version: "1.26"
+          go-version-file: go.mod
+          check-latest: true
           cache: true
       - name: Install fish
         run: brew install fish
