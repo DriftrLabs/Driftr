@@ -101,7 +101,7 @@ func main() {
 		fmt.Fprint(w, index)
 	})
 	mux.HandleFunc(fmt.Sprintf("/v%s/SHASUMS256.txt", fixtureVersion), func(w http.ResponseWriter, r *http.Request) {
-		w.Write(shasums.Bytes())
+		_, _ = w.Write(shasums.Bytes())
 	})
 	mux.HandleFunc(fmt.Sprintf("/v%s/", fixtureVersion), func(w http.ResponseWriter, r *http.Request) {
 		name := r.URL.Path[len(fmt.Sprintf("/v%s/", fixtureVersion)):]
@@ -111,7 +111,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/gzip")
-		w.Write(data)
+		_, _ = w.Write(data)
 	})
 
 	log.Printf("fixture server listening on %s (node v%s)", *addr, fixtureVersion)
