@@ -7,13 +7,23 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
-const nodeDistBaseURL = "https://nodejs.org/dist"
+const defaultNodeDistBaseURL = "https://nodejs.org/dist"
+
+// nodeDistBase returns the Node.js distribution base URL. DRIFTR_NODE_MIRROR
+// overrides the default — for corporate mirrors and hermetic tests.
+func nodeDistBase() string {
+	if m := os.Getenv("DRIFTR_NODE_MIRROR"); m != "" {
+		return strings.TrimRight(m, "/")
+	}
+	return defaultNodeDistBaseURL
+}
 
 const maxNodeDownloadBytes = 500 * 1024 * 1024 // 500 MB
 
@@ -34,7 +44,7 @@ var httpClient = &http.Client{
 // DownloadURL returns the download URL for a given Node.js version.
 func DownloadURL(version string) string {
 	filename := ArchiveFilename(version)
-	return fmt.Sprintf("%s/v%s/%s", nodeDistBaseURL, version, filename)
+	return fmt.Sprintf("%s/v%s/%s", nodeDistBase(), version, filename)
 }
 
 // ArchiveFilename returns the expected archive filename.

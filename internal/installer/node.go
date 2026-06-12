@@ -64,8 +64,6 @@ func (c *installCleanup) run() {
 	}
 }
 
-const nodeIndexURL = "https://nodejs.org/dist/index.json"
-
 // NodeRelease represents a single Node.js release from the index.
 type NodeRelease struct {
 	Version string `json:"version"`
@@ -187,7 +185,7 @@ func ListInstalledToolVersions(tool string) ([]string, error) {
 // FetchNodeIndex fetches the full Node.js release list from nodejs.org.
 // Releases are returned sorted newest-first. Version strings have the "v" prefix stripped.
 func FetchNodeIndex() ([]NodeRelease, error) {
-	resp, err := httpClient.Get(nodeIndexURL)
+	resp, err := httpClient.Get(nodeDistBase() + "/index.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch Node.js release index: %w", err)
 	}

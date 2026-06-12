@@ -129,6 +129,17 @@ git add .driftr.toml   # or package.json
 git commit -m "Pin Node.js version with Driftr"
 ```
 
+## Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DRIFTR_NODE_MIRROR` | `https://nodejs.org/dist` | Alternative Node.js distribution mirror (corporate mirrors, air-gapped setups, hermetic tests). Must serve the same layout: `index.json`, `v<version>/SHASUMS256.txt`, and version tarballs. |
+| `DRIFTR_NPM_REGISTRY` | `https://registry.npmjs.org` | Alternative npm registry for pnpm/yarn installs. Tarball URLs in registry metadata must point back at the same host. |
+
+```bash
+DRIFTR_NODE_MIRROR=https://npmmirror.com/mirrors/node driftr install node@22
+```
+
 ## Storage Layout
 
 Driftr stores all data under `~/.driftr/`:
