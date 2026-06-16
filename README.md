@@ -91,8 +91,31 @@ pnpm -v   # resolves automatically
 | `driftr cache dir` | Print the cache directory path |
 | `driftr self-update` | Update Driftr to the latest version |
 | `driftr doctor [--fix]` | Check your Driftr installation for common problems |
+| `driftr node doctor` | Analyze the project's Node.js / pnpm dependency environment |
+| `driftr node optimize [--install]` | Configure pnpm for shared dependency storage (idempotent) |
+| `driftr node clean [--yes]` | Remove `node_modules` and prune the shared store (dry-run by default) |
+| `driftr node report` | Report `node_modules` size and shared pnpm store size |
 
 All commands support `-v` / `--verbose` for detailed output including resolver tracing and checksum details.
+
+### Shared dependency storage (`driftr node`)
+
+Driftr does not replace pnpm/npm/yarn. The `driftr node` commands configure and
+maintain pnpm's shared content-addressable store so dependencies are stored once
+and reused across every project on the machine, instead of duplicated in each
+`node_modules`.
+
+```bash
+driftr node doctor      # see current package manager + pnpm store configuration
+driftr node optimize    # enable corepack, point pnpm at ~/.driftr/stores/pnpm,
+                        # and turn on the global virtual store
+driftr node report      # compare project node_modules size vs shared store size
+driftr node clean       # dry-run: show what would be removed/pruned
+driftr node clean --yes # remove node_modules, reinstall, prune orphaned packages
+```
+
+`optimize` is idempotent — already-correct settings are left untouched — and
+requires pnpm (run `corepack enable` first if it is missing).
 
 ### Remote version listing flags
 

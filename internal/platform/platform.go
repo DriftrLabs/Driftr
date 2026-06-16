@@ -74,6 +74,25 @@ func CacheDir() (string, error) {
 	return filepath.Join(home, "cache"), nil
 }
 
+// StoresDir returns the shared package-store root (~/.driftr/stores).
+func StoresDir() (string, error) {
+	home, err := DriftrHome()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "stores"), nil
+}
+
+// PnpmStoreDir returns the pnpm content-addressable store directory
+// (~/.driftr/stores/pnpm) that driftr configures pnpm to use.
+func PnpmStoreDir() (string, error) {
+	stores, err := StoresDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(stores, "pnpm"), nil
+}
+
 // GlobalConfigPath returns the path to the global config file.
 func GlobalConfigPath() (string, error) {
 	home, err := DriftrHome()
