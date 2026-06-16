@@ -42,7 +42,7 @@ brew tap DriftrLabs/driftr
 brew install driftr
 ```
 
-After installing, run `driftr setup` and add `~/.driftr/bin` to the front of your PATH. See [docs/installation.md](docs/installation.md) for the required PATH setup and why it matters on macOS.
+After installing, run `driftr setup` — it generates the shims and configures your shell PATH automatically (writing to a universally-sourced rc file such as `~/.zshenv`). Restart your shell afterwards. See [docs/installation.md](docs/installation.md) for details and why PATH ordering matters on macOS.
 
 ### Quick Install (curl)
 
@@ -86,7 +86,7 @@ pnpm -v   # resolves automatically
 | `driftr list --remote [tool]` | Browse available remote versions from nodejs.org / npm registry |
 | `driftr which <tool>` | Show which binary would be executed and why |
 | `driftr run --node <ver> -- <cmd>` | Run a command under a specific Node.js version |
-| `driftr setup` | Initialize Driftr and generate shims |
+| `driftr setup` | Initialize Driftr, generate shims, and configure your shell PATH |
 | `driftr cache clean` | Remove all cached downloads to free disk space |
 | `driftr cache dir` | Print the cache directory path |
 | `driftr self-update` | Update Driftr to the latest version |

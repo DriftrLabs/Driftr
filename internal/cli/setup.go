@@ -2,10 +2,13 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/ioutil"
+	"github.com/DriftrLabs/driftr/internal/pathsetup"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/shim"
 )
@@ -14,7 +17,7 @@ func newSetupCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "setup",
 		Short: "Initialize Driftr directories and generate shims",
-		Long:  "Create the Driftr directory structure and generate shim scripts.\nAfter running setup, add ~/.driftr/bin to your PATH.",
+		Long:  "Create the Driftr directory structure, generate shim scripts, and configure\nyour shell PATH so the shims are found.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := platform.EnsureDirs(); err != nil {
 				return fmt.Errorf("failed to create directories: %w", err)
@@ -29,15 +32,55 @@ func newSetupCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Println(ioutil.Success(ioutil.Bold("Driftr setup complete!")))
-			fmt.Println()
-			fmt.Println("Add the following to your shell profile (~/.zshrc, ~/.bashrc, etc.):")
-			fmt.Println()
-			fmt.Printf("  %s\n", ioutil.Bold(fmt.Sprintf("export PATH=\"%s:$PATH\"", binDir)))
-			fmt.Println()
-			fmt.Println(ioutil.Dim("Then restart your shell or run: source ~/.zshrc"))
-
+			fmt.Fprintln(cmd.OutOrStdout(), ioutil.Success(ioutil.Bold("Driftr setup complete!")))
+			fmt.Fprintln(cmd.OutOrStdout())
+			configureSetupPath(cmd.OutOrStdout(), binDir)
 			return nil
 		},
 	}
+}
+
+// configureSetupPath sets up the shell PATH the same way `doctor --fix` and
+// `self-update` do — writing to the rc file every shell invocation sources
+// (e.g. ~/.zshenv) rather than an interactive-only file like ~/.zshrc. On any
+// failure it falls back to shell-agnostic manual instructions.
+func configureSetupPath(w io.Writer, binDir string) {
+	r, err := pathsetup.Detect(binDir)
+	if err != nil {
+		manualPathInstructions(w, binDir)
+		return
+	}
+
+	if !r.NeedsFix() {
+		fmt.Fprintln(w, ioutil.Success(fmt.Sprintf("PATH already configured in %s", r.Target)))
+		printStaleNote(w, r)
+		fmt.Fprintln(w, ioutil.Dim(fmt.Sprintf("Restart your shell or run: source %s", r.Target)))
+		return
+	}
+
+	wrote, file, applyErr := pathsetup.Apply(r)
+	if applyErr != nil || !wrote {
+		manualPathInstructions(w, binDir)
+		return
+	}
+
+	fmt.Fprintln(w, ioutil.Success(fmt.Sprintf("Added %s to PATH in %s", binDir, file)))
+	printStaleNote(w, r)
+	fmt.Fprintln(w, ioutil.Dim("Restart your shell to start using driftr."))
+}
+
+func printStaleNote(w io.Writer, r pathsetup.Result) {
+	if len(r.StaleFiles) > 0 {
+		fmt.Fprintln(w, ioutil.Dim(fmt.Sprintf("  Note: legacy entries remain in %s — safe to remove.", strings.Join(r.StaleFiles, ", "))))
+	}
+}
+
+// manualPathInstructions prints shell-agnostic fallback guidance when driftr
+// can't determine or write the rc file (e.g. unknown shell).
+func manualPathInstructions(w io.Writer, binDir string) {
+	fmt.Fprintln(w, "Add the following to your shell profile so the shims are found:")
+	fmt.Fprintln(w)
+	fmt.Fprintf(w, "  %s\n", ioutil.Bold(fmt.Sprintf("export PATH=\"%s:$PATH\"", binDir)))
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, ioutil.Dim("Then restart your shell."))
 }
