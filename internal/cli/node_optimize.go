@@ -35,20 +35,22 @@ func newNodeOptimizeCmd() *cobra.Command {
 // runNodeOptimize applies the shared-store configuration idempotently. Returns
 // an actionable error when pnpm is unavailable.
 func runNodeOptimize(p *nodeenv.Pnpm, storeDir string, install bool, w io.Writer) error {
-	if !p.Installed() {
-		return fmt.Errorf("pnpm not found. Run 'corepack enable' to install it, then re-run 'driftr node optimize'")
-	}
-
 	fmt.Fprintln(w, "Optimizing pnpm shared dependency storage...")
 	fmt.Fprintln(w)
 
+	// corepack runs first: enabling it can make pnpm resolvable, so the pnpm
+	// availability check below must come after.
 	if p.CorepackAvailable() {
 		if err := p.CorepackEnable(); err != nil {
 			return fmt.Errorf("corepack enable failed: %w", err)
 		}
 		fmt.Fprintln(w, "✓ corepack enabled")
 	} else {
-		fmt.Fprintln(w, "• corepack not found, skipping (pnpm already available)")
+		fmt.Fprintln(w, "• corepack not found, skipping")
+	}
+
+	if !p.Installed() {
+		return fmt.Errorf("pnpm not found. Install pnpm (e.g. via 'corepack enable'), then re-run 'driftr node optimize'")
 	}
 
 	targets := []struct{ key, value string }{

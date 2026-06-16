@@ -37,12 +37,19 @@ func runNodeReport(p *nodeenv.Pnpm, projectDir string, w io.Writer) error {
 
 	var storeSize int64
 	storeKnown := false
-	if p.Installed() {
-		if path, err := p.StorePath(); err == nil && path != "" {
-			if s, err := nodeenv.DirSize(path); err == nil {
-				storeSize = s
-				storeKnown = true
-			}
+	storeNote := "unknown"
+	switch {
+	case !p.Installed():
+		storeNote = "unknown (pnpm not found)"
+	default:
+		path, err := p.StorePath()
+		if err != nil || path == "" {
+			storeNote = "unknown (could not determine store path)"
+		} else if s, err := nodeenv.DirSize(path); err != nil {
+			storeNote = "unknown (could not measure store)"
+		} else {
+			storeSize = s
+			storeKnown = true
 		}
 	}
 
@@ -53,7 +60,7 @@ func runNodeReport(p *nodeenv.Pnpm, projectDir string, w io.Writer) error {
 	if storeKnown {
 		fmt.Fprintf(w, "Shared pnpm store:     %s\n", formatSize(storeSize))
 	} else {
-		fmt.Fprintln(w, "Shared pnpm store:     unknown (pnpm not found)")
+		fmt.Fprintf(w, "Shared pnpm store:     %s\n", storeNote)
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "The shared pnpm store is reused across every project on this machine,")

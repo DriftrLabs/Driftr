@@ -9,11 +9,10 @@ import (
 // fakeRunner records invocations and returns scripted output keyed by the joined
 // command line. Missing keys return empty output and no error.
 type fakeRunner struct {
-	calls    []string
-	outputs  map[string]string
-	errs     map[string]error
-	missing  map[string]bool // names that LookPath should fail for
-	lookErrs error
+	calls   []string
+	outputs map[string]string
+	errs    map[string]error
+	missing map[string]bool // names that LookPath should fail for
 }
 
 func newFakeRunner() *fakeRunner {

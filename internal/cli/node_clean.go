@@ -37,8 +37,13 @@ func newNodeCleanCmd() *cobra.Command {
 // doExecute=false it only reports what would happen and mutates nothing.
 func runNodeClean(p *nodeenv.Pnpm, projectDir string, doExecute bool, w io.Writer) error {
 	nodeModules := filepath.Join(projectDir, "node_modules")
+	// Presence is decided by stat, not size: an empty node_modules (or one
+	// holding only symlinks) still needs removing and reinstalling.
+	hasNodeModules := false
+	if info, err := os.Stat(nodeModules); err == nil && info.IsDir() {
+		hasNodeModules = true
+	}
 	size, _ := nodeenv.DirSize(nodeModules)
-	hasNodeModules := size > 0
 
 	if !doExecute {
 		fmt.Fprintln(w, "Dry run — no changes made. Re-run with --yes to execute.")

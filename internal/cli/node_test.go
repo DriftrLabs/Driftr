@@ -138,6 +138,54 @@ func TestRunNodeClean_ExecuteRemovesAndPrunes(t *testing.T) {
 	}
 }
 
+func TestRunNodeClean_ExecuteRemovesEmptyNodeModules(t *testing.T) {
+	// Empty node_modules must still be removed and trigger reinstall — the old
+	// size>0 check wrongly treated it as absent.
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "node_modules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	s := newStubRunner()
+	if err := runNodeClean(nodeenv.NewPnpm(s), dir, true, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "node_modules")); !os.IsNotExist(err) {
+		t.Errorf("empty node_modules should be removed, stat err=%v", err)
+	}
+	if !s.called("pnpm install") {
+		t.Errorf("expected reinstall after removing empty node_modules, got %v", s.calls)
+	}
+}
+
+func TestRunNodeOptimize_RunsCorepackBeforeFailing(t *testing.T) {
+	s := newStubRunner()
+	s.missing["pnpm"] = true // pnpm absent, corepack present
+	err := runNodeOptimize(nodeenv.NewPnpm(s), "/store/pnpm", false, &bytes.Buffer{})
+	if err == nil {
+		t.Fatal("expected error when pnpm still missing after corepack enable")
+	}
+	if !s.called("corepack enable") {
+		t.Errorf("corepack enable must be attempted before failing, got %v", s.calls)
+	}
+}
+
+func TestRunNodeReport_StorePathFailureNotReportedAsMissing(t *testing.T) {
+	dir := t.TempDir()
+	s := newStubRunner() // pnpm present, but "pnpm store path" returns empty
+	var buf bytes.Buffer
+	if err := runNodeReport(nodeenv.NewPnpm(s), dir, &buf); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if strings.Contains(out, "pnpm not found") {
+		t.Errorf("pnpm is present; must not claim 'pnpm not found': %s", out)
+	}
+	if !strings.Contains(out, "store path") {
+		t.Errorf("expected store-path failure note, got: %s", out)
+	}
+}
+
 func TestGatherNodeDoctor_RecommendsOptimizeWhenDisabled(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "pnpm-lock.yaml"), []byte(""), 0o644); err != nil {
