@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/config"
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/resolver"
 )
 
@@ -33,7 +34,7 @@ func newDefaultCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Set global default to %s %s\n", tool, versionStr)
+			fmt.Println(ioutil.Success(fmt.Sprintf("Set global default to %s %s", tool, ioutil.Bold(versionStr))))
 			return nil
 		},
 	}

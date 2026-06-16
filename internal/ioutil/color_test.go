@@ -32,6 +32,37 @@ func TestColorDisabled_NO_COLOR(t *testing.T) {
 	if Dim("x") != "x" {
 		t.Error("Dim() should return plain text when NO_COLOR is set")
 	}
+	if Yellow("x") != "x" || Red("x") != "x" || Cyan("x") != "x" {
+		t.Error("Yellow/Red/Cyan should return plain text when NO_COLOR is set")
+	}
+}
+
+func TestSemanticHelpers_PlainWhenDisabled(t *testing.T) {
+	t.Setenv("NO_COLOR", "1")
+
+	for name, got := range map[string]string{
+		"Title":   Title("Heading"),
+		"Success": Success("done"),
+		"Warn":    Warn("careful"),
+		"Failure": Failure("nope"),
+		"Bullet":  Bullet("skipped"),
+		"Label":   Label("Key:"),
+	} {
+		if strings.Contains(got, "\033") {
+			t.Errorf("%s should not emit ANSI when color disabled, got %q", name, got)
+		}
+	}
+
+	// Prefixes/markers must survive regardless of color state.
+	if !strings.HasPrefix(Success("done"), "✓ ") {
+		t.Errorf("Success missing check mark: %q", Success("done"))
+	}
+	if !strings.HasPrefix(Warn("x"), "⚠ ") {
+		t.Errorf("Warn missing sign: %q", Warn("x"))
+	}
+	if !strings.HasPrefix(Bullet("x"), "• ") {
+		t.Errorf("Bullet missing marker: %q", Bullet("x"))
+	}
 }
 
 func TestColorDisabled_NonTTY(t *testing.T) {

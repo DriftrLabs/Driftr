@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/config"
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/pathsetup"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/shim"
@@ -60,9 +61,9 @@ func newDoctorCmd() *cobra.Command {
 
 			fmt.Println()
 			if issues == 0 {
-				fmt.Println("No issues found.")
+				fmt.Println(ioutil.Success(ioutil.Bold("No issues found.")))
 			} else {
-				fmt.Printf("Found %d issue(s).\n", issues)
+				fmt.Println(ioutil.Warn(fmt.Sprintf("Found %d issue(s).", issues)))
 			}
 			return nil
 		},
@@ -72,11 +73,11 @@ func newDoctorCmd() *cobra.Command {
 }
 
 func pass(msg string) {
-	fmt.Printf("  ok  %s\n", msg)
+	fmt.Printf("  %s  %s\n", ioutil.Green("ok"), msg)
 }
 
 func warn(msg string) {
-	fmt.Printf("  !!  %s\n", msg)
+	fmt.Printf("  %s  %s\n", ioutil.Yellow("!!"), msg)
 }
 
 func checkPath(binDir string) int {

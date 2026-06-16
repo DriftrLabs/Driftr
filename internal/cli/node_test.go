@@ -215,6 +215,35 @@ func TestGatherNodeDoctor_RecommendsOptimizeWhenDisabled(t *testing.T) {
 	}
 }
 
+func TestRenderNodeDoctor_PnpmMissingRecommendsCorepack(t *testing.T) {
+	var buf bytes.Buffer
+	renderNodeDoctor(&buf, nodeDoctorInfo{projectDir: "/p", pnpmInstalled: false})
+	out := buf.String()
+	if !strings.Contains(out, "corepack enable") {
+		t.Errorf("expected corepack recommendation, got: %s", out)
+	}
+	if !strings.Contains(out, "not found") {
+		t.Errorf("expected pnpm 'not found', got: %s", out)
+	}
+}
+
+func TestRenderNodeDoctor_AllGoodSuccess(t *testing.T) {
+	var buf bytes.Buffer
+	renderNodeDoctor(&buf, nodeDoctorInfo{
+		projectDir:         "/p",
+		pnpmInstalled:      true,
+		pnpmVersion:        "9.1.0",
+		globalVirtualStore: true,
+	})
+	out := buf.String()
+	if strings.Contains(out, "Recommendation") {
+		t.Errorf("no recommendation expected when already optimized, got: %s", out)
+	}
+	if !strings.Contains(out, "enabled") {
+		t.Errorf("expected enabled confirmation, got: %s", out)
+	}
+}
+
 func TestRunNodeReport_ShowsSizes(t *testing.T) {
 	dir := t.TempDir()
 	store := t.TempDir()

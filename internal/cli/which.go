@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/resolver"
 )
@@ -28,12 +29,17 @@ func newWhichCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Tool:    %s\n", tool)
-			fmt.Printf("Version: %s\n", res.Version)
-			fmt.Printf("Binary:  %s\n", binPath)
-			fmt.Printf("Source:  %s\n", res.Source)
+			row := func(label, value string) {
+				// Pad the plain label before coloring so the (runtime zero-width)
+				// ANSI codes don't throw off column alignment.
+				fmt.Printf("%s %s\n", ioutil.Label(fmt.Sprintf("%-8s", label)), value)
+			}
+			row("Tool:", tool)
+			row("Version:", ioutil.Bold(res.Version))
+			row("Binary:", ioutil.Green(binPath))
+			row("Source:", fmt.Sprint(res.Source))
 			if res.ProjectDir != "" {
-				fmt.Printf("Project: %s\n", res.ProjectDir)
+				row("Project:", res.ProjectDir)
 			}
 
 			return nil

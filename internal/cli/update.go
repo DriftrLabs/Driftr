@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/pathsetup"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/updater"
@@ -24,9 +25,9 @@ func newUpdateCmd() *cobra.Command {
 			}
 
 			if newVersion == "" {
-				fmt.Printf("driftr v%s is already the latest version.\n", Version)
+				fmt.Println(ioutil.Dim(fmt.Sprintf("driftr v%s is already the latest version.", Version)))
 			} else {
-				fmt.Printf("Updated successfully to driftr v%s!\n", newVersion)
+				fmt.Println(ioutil.Success(fmt.Sprintf("Updated successfully to driftr %s!", ioutil.Bold("v"+newVersion))))
 				migratePathConfig()
 			}
 			return nil
@@ -54,8 +55,8 @@ func migratePathConfig() {
 	if err != nil || !wrote {
 		return
 	}
-	fmt.Printf("Migrated PATH config to %s for universal shell coverage.\n", file)
+	fmt.Println(ioutil.Success(fmt.Sprintf("Migrated PATH config to %s for universal shell coverage.", file)))
 	if len(r.StaleFiles) > 0 {
-		fmt.Printf("  Note: legacy entries remain in %s — safe to remove.\n", strings.Join(r.StaleFiles, ", "))
+		fmt.Println(ioutil.Dim(fmt.Sprintf("  Note: legacy entries remain in %s — safe to remove.", strings.Join(r.StaleFiles, ", "))))
 	}
 }

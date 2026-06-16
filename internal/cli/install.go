@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/installer"
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 )
 
 func newInstallCmd() *cobra.Command {
@@ -18,14 +19,14 @@ func newInstallCmd() *cobra.Command {
 			spec := args[0]
 			tool, versionSpec := parseToolVersion(spec)
 
-			fmt.Printf("Installing %s...\n", spec)
+			fmt.Println(ioutil.Dim(fmt.Sprintf("Installing %s...", spec)))
 
 			resolved, err := installTool(tool, versionSpec, verbose)
 			if err != nil {
 				return fmt.Errorf("installation failed: %w", err)
 			}
 
-			fmt.Printf("Installed %s %s\n", tool, resolved)
+			fmt.Println(ioutil.Success(fmt.Sprintf("Installed %s %s", tool, ioutil.Bold(resolved))))
 			return nil
 		},
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/nodeenv"
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
@@ -35,7 +36,7 @@ func newNodeOptimizeCmd() *cobra.Command {
 // runNodeOptimize applies the shared-store configuration idempotently. Returns
 // an actionable error when pnpm is unavailable.
 func runNodeOptimize(p *nodeenv.Pnpm, storeDir string, install bool, w io.Writer) error {
-	fmt.Fprintln(w, "Optimizing pnpm shared dependency storage...")
+	fmt.Fprintln(w, ioutil.Title("Optimizing pnpm shared dependency storage"))
 	fmt.Fprintln(w)
 
 	// corepack runs first: enabling it can make pnpm resolvable, so the pnpm
@@ -44,9 +45,9 @@ func runNodeOptimize(p *nodeenv.Pnpm, storeDir string, install bool, w io.Writer
 		if err := p.CorepackEnable(); err != nil {
 			return fmt.Errorf("corepack enable failed: %w", err)
 		}
-		fmt.Fprintln(w, "✓ corepack enabled")
+		fmt.Fprintln(w, ioutil.Success("corepack enabled"))
 	} else {
-		fmt.Fprintln(w, "• corepack not found, skipping")
+		fmt.Fprintln(w, ioutil.Bullet("corepack not found, skipping"))
 	}
 
 	if !p.Installed() {
@@ -63,13 +64,13 @@ func runNodeOptimize(p *nodeenv.Pnpm, storeDir string, install bool, w io.Writer
 			return fmt.Errorf("reading pnpm config %q: %w", t.key, err)
 		}
 		if current == t.value {
-			fmt.Fprintf(w, "• %s already %s\n", t.key, t.value)
+			fmt.Fprintln(w, ioutil.Bullet(fmt.Sprintf("%s already %s", t.key, t.value)))
 			continue
 		}
 		if err := p.ConfigSet(t.key, t.value); err != nil {
 			return fmt.Errorf("setting pnpm config %q: %w", t.key, err)
 		}
-		fmt.Fprintf(w, "✓ set %s = %s\n", t.key, t.value)
+		fmt.Fprintln(w, ioutil.Success(fmt.Sprintf("set %s = %s", t.key, ioutil.Bold(t.value))))
 	}
 
 	if install {
@@ -78,10 +79,10 @@ func runNodeOptimize(p *nodeenv.Pnpm, storeDir string, install bool, w io.Writer
 		if _, err := p.Install(); err != nil {
 			return fmt.Errorf("pnpm install failed: %w", err)
 		}
-		fmt.Fprintln(w, "✓ dependencies installed")
+		fmt.Fprintln(w, ioutil.Success("dependencies installed"))
 	}
 
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Done. Dependencies are now stored in the shared pnpm store.")
+	fmt.Fprintln(w, ioutil.Green("Done. Dependencies are now stored in the shared pnpm store."))
 	return nil
 }

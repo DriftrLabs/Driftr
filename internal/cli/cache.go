@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 )
 
@@ -37,14 +38,14 @@ func newCacheCleanCmd() *cobra.Command {
 			entries, err := os.ReadDir(cacheDir)
 			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
-					fmt.Println("Cache is already empty.")
+					fmt.Println(ioutil.Dim("Cache is already empty."))
 					return nil
 				}
 				return fmt.Errorf("failed to read cache directory: %w", err)
 			}
 
 			if len(entries) == 0 {
-				fmt.Println("Cache is already empty.")
+				fmt.Println(ioutil.Dim("Cache is already empty."))
 				return nil
 			}
 
@@ -63,11 +64,11 @@ func newCacheCleanCmd() *cobra.Command {
 				return fmt.Errorf("failed to clean cache: %w", err)
 			}
 
-			summary := fmt.Sprintf("Removed %d cached file(s), freed %s", len(entries), formatSize(totalSize))
+			summary := fmt.Sprintf("Removed %d cached file(s), freed %s", len(entries), ioutil.Bold(formatSize(totalSize)))
 			if unsized > 0 {
 				summary += fmt.Sprintf(" (size of %d file(s) unknown)", unsized)
 			}
-			fmt.Println(summary + ".")
+			fmt.Println(ioutil.Success(summary + "."))
 			return nil
 		},
 	}

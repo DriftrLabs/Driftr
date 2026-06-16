@@ -98,6 +98,8 @@ pnpm -v   # resolves automatically
 
 All commands support `-v` / `--verbose` for detailed output including resolver tracing and checksum details.
 
+Output is colorized when writing to a terminal. Color is disabled automatically when output is piped/redirected, or when the [`NO_COLOR`](https://no-color.org/) environment variable is set.
+
 ### Shared dependency storage (`driftr node`)
 
 Driftr does not replace pnpm/npm/yarn. The `driftr node` commands configure and

@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/nodeenv"
 )
 
@@ -53,17 +54,21 @@ func runNodeReport(p *nodeenv.Pnpm, projectDir string, w io.Writer) error {
 		}
 	}
 
-	fmt.Fprintln(w, "Driftr Storage Report")
+	row := func(label, value string) {
+		fmt.Fprintf(w, "%s %s\n", ioutil.Label(fmt.Sprintf("%-21s", label)), value)
+	}
+
+	fmt.Fprintln(w, ioutil.Title("Driftr Storage Report"))
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Project:               %s\n", projectDir)
-	fmt.Fprintf(w, "Project node_modules:  %s\n", formatSize(nodeModulesSize))
+	row("Project:", projectDir)
+	row("Project node_modules:", ioutil.Bold(formatSize(nodeModulesSize)))
 	if storeKnown {
-		fmt.Fprintf(w, "Shared pnpm store:     %s\n", formatSize(storeSize))
+		row("Shared pnpm store:", ioutil.Bold(formatSize(storeSize)))
 	} else {
-		fmt.Fprintf(w, "Shared pnpm store:     %s\n", storeNote)
+		row("Shared pnpm store:", ioutil.Dim(storeNote))
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "The shared pnpm store is reused across every project on this machine,")
-	fmt.Fprintln(w, "so its cost is amortized — more projects means greater savings overall.")
+	fmt.Fprintln(w, ioutil.Dim("The shared pnpm store is reused across every project on this machine,"))
+	fmt.Fprintln(w, ioutil.Dim("so its cost is amortized — more projects means greater savings overall."))
 	return nil
 }

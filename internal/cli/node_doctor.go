@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/nodeenv"
 )
 
@@ -79,68 +80,78 @@ func gatherNodeDoctor(r nodeenv.Runner, projectDir string) nodeDoctorInfo {
 }
 
 func renderNodeDoctor(w io.Writer, info nodeDoctorInfo) {
-	fmt.Fprintln(w, "Driftr Node Doctor")
+	row := func(label, value string) {
+		// Pad the plain label before coloring so alignment is unaffected by
+		// the (zero-width at runtime) ANSI escape codes.
+		fmt.Fprintf(w, "%s %s\n", ioutil.Label(fmt.Sprintf("%-21s", label)), value)
+	}
+
+	fmt.Fprintln(w, ioutil.Title("Driftr Node Doctor"))
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "Project:         %s\n", info.projectDir)
-	fmt.Fprintf(w, "Package manager: %s\n", info.packageManager)
-	fmt.Fprintf(w, "Node.js:         %s\n", orNotFound(info.nodeVersion))
-	fmt.Fprintf(w, "Corepack:        %s\n", availability(info.corepackAvailable))
+	row("Project:", info.projectDir)
+	row("Package manager:", string(info.packageManager))
+	row("Node.js:", orNotFound(info.nodeVersion))
+	row("Corepack:", availability(info.corepackAvailable))
 
 	if info.pnpmInstalled {
-		fmt.Fprintf(w, "pnpm:            %s\n", orNotFound(info.pnpmVersion))
+		row("pnpm:", orNotFound(info.pnpmVersion))
 	} else {
-		fmt.Fprintf(w, "pnpm:            not found\n")
+		row("pnpm:", ioutil.Red("not found"))
 	}
 
 	if info.nodeModulesSize > 0 {
-		fmt.Fprintf(w, "node_modules:    %s\n", formatSize(info.nodeModulesSize))
+		row("node_modules:", formatSize(info.nodeModulesSize))
 	} else {
-		fmt.Fprintf(w, "node_modules:    none\n")
+		row("node_modules:", ioutil.Dim("none"))
 	}
 
-	fmt.Fprintf(w, "pnpm store:      %s\n", orUnknown(info.storePath))
-	fmt.Fprintf(w, "global virtual store: %s\n", enabledDisabled(info.globalVirtualStore))
+	row("pnpm store:", orUnknown(info.storePath))
+	row("global virtual store:", enabledDisabled(info.globalVirtualStore))
 
 	if !info.pnpmInstalled {
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Recommendation:")
+		fmt.Fprintln(w, ioutil.Warn("Recommendation"))
 		fmt.Fprintln(w, "pnpm is not installed. Enable corepack to get it, then optimize storage.")
-		fmt.Fprintln(w, "Run: corepack enable && driftr node optimize")
+		fmt.Fprintf(w, "Run: %s\n", ioutil.Bold("corepack enable && driftr node optimize"))
 		return
 	}
 
 	if !info.globalVirtualStore {
 		fmt.Fprintln(w)
-		fmt.Fprintln(w, "Recommendation:")
+		fmt.Fprintln(w, ioutil.Warn("Recommendation"))
 		fmt.Fprintln(w, "Enable pnpm shared storage to reduce duplicated dependency data.")
-		fmt.Fprintln(w, "Run: driftr node optimize")
+		fmt.Fprintf(w, "Run: %s\n", ioutil.Bold("driftr node optimize"))
+		return
 	}
+
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, ioutil.Success("Shared dependency storage is enabled."))
 }
 
 func orNotFound(s string) string {
 	if s == "" {
-		return "not found"
+		return ioutil.Red("not found")
 	}
 	return s
 }
 
 func orUnknown(s string) string {
 	if s == "" {
-		return "unknown"
+		return ioutil.Dim("unknown")
 	}
 	return s
 }
 
 func availability(ok bool) string {
 	if ok {
-		return "available"
+		return ioutil.Green("available")
 	}
-	return "not found"
+	return ioutil.Red("not found")
 }
 
 func enabledDisabled(on bool) string {
 	if on {
-		return "enabled"
+		return ioutil.Green("enabled")
 	}
-	return "disabled"
+	return ioutil.Yellow("disabled")
 }
