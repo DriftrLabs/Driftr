@@ -52,6 +52,7 @@ func NewRootCmd() *cobra.Command {
 		newCacheCmd(),
 		newDoctorCmd(),
 		newUpdateCmd(),
+		newNodeCmd(),
 	)
 
 	return root

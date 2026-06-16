@@ -150,6 +150,17 @@ check "pnpx shim was created" test -f "$HOME/.driftr/bin/pnpx"
 check "yarn shim was created" test -f "$HOME/.driftr/bin/yarn"
 echo
 
+# ── 14. Node Shared Storage ─────────────────
+# pnpm/corepack are not guaranteed in the test image, so only cover the
+# pnpm-free paths: help registration and clean's dry-run (mutates nothing).
+echo -e "${BLUE}[14] Node Shared Storage${NC}"
+mkdir -p /tmp/test-node && cd /tmp/test-node || exit 1
+check_output "node group help lists subcommands" "optimize" driftr node --help
+check_output "node clean defaults to dry-run" "Dry run" driftr node clean
+check "node clean dry-run creates no node_modules" sh -c '! test -d /tmp/test-node/node_modules'
+cd /home/driftr || exit 1
+echo
+
 # ── Summary ───────────────────────────────────
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════${NC}"

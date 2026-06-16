@@ -91,10 +91,13 @@ func newCacheDirCmd() *cobra.Command {
 
 func formatSize(bytes int64) string {
 	const (
+		gb = 1024 * 1024 * 1024
 		mb = 1024 * 1024
 		kb = 1024
 	)
 	switch {
+	case bytes >= gb:
+		return fmt.Sprintf("%.1f GB", float64(bytes)/float64(gb))
 	case bytes >= mb:
 		return fmt.Sprintf("%.1f MB", float64(bytes)/float64(mb))
 	case bytes >= kb:
