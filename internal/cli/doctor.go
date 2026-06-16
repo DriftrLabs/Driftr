@@ -128,8 +128,7 @@ func checkShimShadowing(binDir string) int {
 	}
 
 	if shadowed > 0 {
-		warn("  another install earlier in PATH is shadowing driftr — put ~/.driftr/bin first")
-		warn("  (e.g. append the PATH export to the end of ~/.zshrc, or remove the conflicting tool)")
+		warn("  ensure " + binDir + " appears earlier in PATH than the conflicting install, or remove that tool")
 	}
 	return shadowed
 }
