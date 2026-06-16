@@ -129,6 +129,92 @@ func Apply(r Result) (wrote bool, target string, err error) {
 	return true, r.Target, nil
 }
 
+// GuardProfile returns the interactive rc file that is sourced *last* for the
+// shell — the right place for a PATH "precedence guard" that must win over
+// dirs prepended by other tools (Homebrew, Volta) during interactive startup.
+//
+// This differs from TargetProfile (the universally-sourced file): the target
+// guarantees coverage in non-interactive shells, while the guard guarantees
+// precedence in interactive ones. Returns "" for shells where no guard applies.
+func GuardProfile(shell Shell) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("home dir: %w", err)
+	}
+
+	switch shell {
+	case ShellZsh:
+		zdotdir := os.Getenv("ZDOTDIR")
+		if zdotdir == "" {
+			zdotdir = home
+		}
+		return filepath.Join(zdotdir, ".zshrc"), nil
+	case ShellBash:
+		return filepath.Join(home, ".bashrc"), nil
+	case ShellFish:
+		base := os.Getenv("XDG_CONFIG_HOME")
+		if base == "" {
+			base = filepath.Join(home, ".config")
+		}
+		return filepath.Join(base, "fish", "config.fish"), nil
+	default:
+		return "", nil
+	}
+}
+
+// ApplyGuard appends a PATH precedence guard to the shell's interactive rc file
+// (see GuardProfile). It is idempotent: if the file already exports binDir, it
+// writes nothing. Returns (true, file) when it wrote, (false, "") otherwise.
+//
+// Use only when binDir is on PATH but shadowed by an earlier entry — appending
+// the export last lets driftr's shims win. The universal config (Apply) is
+// still required for non-interactive coverage.
+func ApplyGuard(shell Shell, binDir string) (wrote bool, file string, err error) {
+	guard, err := GuardProfile(shell)
+	if err != nil {
+		return false, "", err
+	}
+	if guard == "" {
+		return false, "", nil
+	}
+
+	mentioned, err := fileMentionsAny(guard, binDirNeedles(binDir))
+	if err != nil {
+		return false, "", err
+	}
+	if mentioned {
+		return false, "", nil // already present — nothing to do
+	}
+
+	if err = os.MkdirAll(filepath.Dir(guard), 0o755); err != nil {
+		return false, "", fmt.Errorf("create profile dir: %w", err)
+	}
+
+	f, ferr := os.OpenFile(guard, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if ferr != nil {
+		return false, "", fmt.Errorf("open %s: %w", guard, ferr)
+	}
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close %s: %w", guard, cerr)
+			wrote = false
+			file = ""
+		}
+	}()
+
+	info, _ := f.Stat()
+	prefix := "\n"
+	if info != nil && info.Size() == 0 {
+		prefix = ""
+	}
+	line := exportLine(shell, binDir)
+	if _, werr := fmt.Fprintf(f, "%s# Driftr (precedence guard — keep last)\n%s\n", prefix, line); werr != nil {
+		return false, "", fmt.Errorf("write %s: %w", guard, werr)
+	}
+
+	return true, guard, nil
+}
+
 // DetectShell returns the user's shell based on $SHELL, defaulting to unknown.
 func DetectShell() Shell {
 	sh := os.Getenv("SHELL")

@@ -317,6 +317,79 @@ func TestDetect_InProcessPATH(t *testing.T) {
 	}
 }
 
+func TestGuardProfile(t *testing.T) {
+	home := setHome(t)
+	cases := map[Shell]string{
+		ShellZsh:     filepath.Join(home, ".zshrc"),
+		ShellBash:    filepath.Join(home, ".bashrc"),
+		ShellFish:    filepath.Join(home, ".config", "fish", "config.fish"),
+		ShellUnknown: "",
+	}
+	for shell, want := range cases {
+		got, err := GuardProfile(shell)
+		if err != nil {
+			t.Fatalf("%s: %v", shell, err)
+		}
+		if got != want {
+			t.Errorf("GuardProfile(%s) = %q, want %q", shell, got, want)
+		}
+	}
+}
+
+func TestApplyGuard_AppendsToInteractiveRc(t *testing.T) {
+	home := setHome(t)
+	binDir := filepath.Join(home, ".driftr", "bin")
+	zshrc := filepath.Join(home, ".zshrc")
+	writeFile(t, zshrc, "eval \"$(/opt/homebrew/bin/brew shellenv)\"\n")
+
+	wrote, file, err := ApplyGuard(ShellZsh, binDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !wrote || file != zshrc {
+		t.Fatalf("ApplyGuard wrote=%v file=%q, want true %q", wrote, file, zshrc)
+	}
+
+	content := readFile(t, zshrc)
+	// Guard must come AFTER the brew line to win precedence.
+	brewIdx := strings.Index(content, "brew shellenv")
+	guardIdx := strings.Index(content, "export PATH=\""+binDir+":$PATH\"")
+	if brewIdx < 0 || guardIdx < 0 || guardIdx < brewIdx {
+		t.Errorf("guard must be appended after existing content:\n%s", content)
+	}
+	if !strings.Contains(content, "precedence guard") {
+		t.Errorf("missing guard marker:\n%s", content)
+	}
+}
+
+func TestApplyGuard_Idempotent(t *testing.T) {
+	home := setHome(t)
+	binDir := filepath.Join(home, ".driftr", "bin")
+	zshrc := filepath.Join(home, ".zshrc")
+	writeFile(t, zshrc, "export PATH=\""+binDir+":$PATH\"\n")
+
+	wrote, _, err := ApplyGuard(ShellZsh, binDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wrote {
+		t.Error("ApplyGuard wrote when binDir already exported in guard file")
+	}
+}
+
+func TestApplyGuard_UnknownShellNoOp(t *testing.T) {
+	home := setHome(t)
+	binDir := filepath.Join(home, ".driftr", "bin")
+
+	wrote, file, err := ApplyGuard(ShellUnknown, binDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wrote || file != "" {
+		t.Errorf("ApplyGuard(unknown) wrote=%v file=%q, want no-op", wrote, file)
+	}
+}
+
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

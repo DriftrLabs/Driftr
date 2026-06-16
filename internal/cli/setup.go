@@ -54,6 +54,7 @@ func configureSetupPath(w io.Writer, binDir string) {
 	if !r.NeedsFix() {
 		fmt.Fprintln(w, ioutil.Success(fmt.Sprintf("PATH already configured in %s", r.Target)))
 		printStaleNote(w, r)
+		applyShadowGuard(w, binDir)
 		fmt.Fprintln(w, ioutil.Dim(fmt.Sprintf("Restart your shell or run: source %s", r.Target)))
 		return
 	}
@@ -66,7 +67,23 @@ func configureSetupPath(w io.Writer, binDir string) {
 
 	fmt.Fprintln(w, ioutil.Success(fmt.Sprintf("Added %s to PATH in %s", binDir, file)))
 	printStaleNote(w, r)
+	applyShadowGuard(w, binDir)
 	fmt.Fprintln(w, ioutil.Dim("Restart your shell to start using driftr."))
+}
+
+// applyShadowGuard adds a PATH precedence guard to the interactive rc file when
+// a managed tool is currently shadowed by another install earlier in PATH
+// (Homebrew, Volta, …). The universal config alone can't win in that case
+// because those tools re-prepend their dirs during interactive startup.
+func applyShadowGuard(w io.Writer, binDir string) {
+	if len(shadowedShims(binDir)) == 0 {
+		return
+	}
+	wrote, file, err := pathsetup.ApplyGuard(pathsetup.DetectShell(), binDir)
+	if err != nil || !wrote {
+		return
+	}
+	fmt.Fprintln(w, ioutil.Success(fmt.Sprintf("Added a PATH precedence guard to %s (another install was shadowing driftr)", file)))
 }
 
 func printStaleNote(w io.Writer, r pathsetup.Result) {

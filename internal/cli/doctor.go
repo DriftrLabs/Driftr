@@ -50,7 +50,7 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			issues += checkPath(binDir)
-			issues += checkShimShadowing(binDir)
+			issues += checkShimShadowing(binDir, fix)
 			issues += checkShellRCPlacement(binDir, fix)
 			issues += checkShims(binDir)
 			issues += checkShimBinaryPath(binDir)
@@ -108,13 +108,21 @@ func binDirOnPath(binDir string) bool {
 //
 // Only runs when the shim dir is on PATH at all; otherwise checkPath already
 // reported the root problem and this would be redundant noise.
-func checkShimShadowing(binDir string) int {
-	if !binDirOnPath(binDir) {
-		return 0
-	}
+// shadowedShim records a managed tool whose resolved binary is not the shim.
+type shadowedShim struct {
+	tool     string
+	resolved string
+}
 
+// shadowedShims returns the managed tools that resolve to a non-shim binary
+// because another install sits earlier in PATH. Empty when the shim dir is not
+// on PATH (checkPath owns that case) or nothing is shadowed.
+func shadowedShims(binDir string) []shadowedShim {
+	if !binDirOnPath(binDir) {
+		return nil
+	}
 	shimDir := filepath.Clean(binDir)
-	shadowed := 0
+	var shadows []shadowedShim
 	for _, tool := range versionedTools {
 		resolved, err := exec.LookPath(tool)
 		if err != nil {
@@ -123,14 +131,45 @@ func checkShimShadowing(binDir string) int {
 		if filepath.Dir(filepath.Clean(resolved)) == shimDir {
 			continue // driftr shim wins
 		}
-		warn(fmt.Sprintf("%s resolves to %s, not the driftr shim — pins/defaults won't apply", tool, resolved))
-		shadowed++
+		shadows = append(shadows, shadowedShim{tool: tool, resolved: resolved})
+	}
+	return shadows
+}
+
+// checkShimShadowing detects when a managed tool resolves to a binary that is
+// not driftr's shim — i.e. another install (Homebrew, Volta, asdf, …) sits
+// earlier in PATH and wins. driftr can pin and resolve correctly, but the
+// shadowing binary is what the shell actually runs, so the pin appears ignored.
+//
+// With fix=true it repairs the situation by appending a PATH precedence guard
+// to the interactive rc file (see pathsetup.ApplyGuard).
+func checkShimShadowing(binDir string, fix bool) int {
+	shadows := shadowedShims(binDir)
+	if len(shadows) == 0 {
+		return 0
+	}
+	for _, s := range shadows {
+		warn(fmt.Sprintf("%s resolves to %s, not the driftr shim — pins/defaults won't apply", s.tool, s.resolved))
 	}
 
-	if shadowed > 0 {
-		warn("  ensure " + binDir + " appears earlier in PATH than the conflicting install, or remove that tool")
+	if !fix {
+		warn("  run `driftr doctor --fix` to add a PATH precedence guard, or remove the conflicting tool")
+		return 1
 	}
-	return shadowed
+
+	wrote, file, err := pathsetup.ApplyGuard(pathsetup.DetectShell(), binDir)
+	if err != nil {
+		warn("  fix failed: " + err.Error())
+		return 1
+	}
+	if wrote {
+		pass(fmt.Sprintf("  fixed: added PATH precedence guard to %s (open a new shell to apply)", file))
+		return 0
+	}
+	// Guard already present but the tool is still shadowed: PATH in this session
+	// is stale (rc not re-sourced) or another tool prepends after the guard.
+	warn("  precedence guard already present — restart your shell, or ensure " + binDir + " is exported last")
+	return 1
 }
 
 // checkShellRCPlacement verifies that binDir is exported from a shell rc file
