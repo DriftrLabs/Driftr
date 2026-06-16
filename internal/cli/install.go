@@ -11,15 +11,19 @@ import (
 
 func newInstallCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "install <tool@version>",
+		Use:   "install <tool[@version]>",
 		Short: "Install a tool version",
-		Long:  "Download and install a specific tool version.\n\nExamples:\n  driftr install node@24\n  driftr install pnpm@9\n  driftr install yarn@1\n  driftr install node@latest",
+		Long:  "Download and install a tool version.\n\nA bare tool name installs the newest release.\n\nExamples:\n  driftr install pnpm        # latest pnpm\n  driftr install node        # latest node\n  driftr install node@24\n  driftr install pnpm@9\n  driftr install yarn@1\n  driftr install node@latest",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			spec := args[0]
-			tool, versionSpec := parseToolVersion(spec)
+			tool, versionSpec := parseToolVersion(args[0])
+			// A bare tool name ("driftr install pnpm") has no version — install
+			// the newest release.
+			if versionSpec == "" {
+				versionSpec = "latest"
+			}
 
-			fmt.Println(ioutil.Dim(fmt.Sprintf("Installing %s...", spec)))
+			fmt.Println(ioutil.Dim(fmt.Sprintf("Installing %s@%s...", tool, versionSpec)))
 
 			resolved, err := installTool(tool, versionSpec, verbose)
 			if err != nil {
