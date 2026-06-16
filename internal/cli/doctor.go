@@ -50,6 +50,7 @@ func newDoctorCmd() *cobra.Command {
 			}
 
 			issues += checkPath(binDir)
+			issues += checkShimShadowing(binDir)
 			issues += checkShellRCPlacement(binDir, fix)
 			issues += checkShims(binDir)
 			issues += checkShimBinaryPath(binDir)
@@ -81,16 +82,56 @@ func warn(msg string) {
 }
 
 func checkPath(binDir string) int {
+	if binDirOnPath(binDir) {
+		pass(binDir + " is on PATH")
+		return 0
+	}
+	warn(binDir + " is not on PATH — shims won't be found")
+	return 1
+}
+
+// binDirOnPath reports whether binDir appears as a PATH entry.
+func binDirOnPath(binDir string) bool {
 	cleanBinDir := filepath.Clean(binDir)
 	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
 		if filepath.Clean(dir) == cleanBinDir {
-			pass(binDir + " is on PATH")
-			return 0
+			return true
 		}
 	}
+	return false
+}
 
-	warn(binDir + " is not on PATH — shims won't be found")
-	return 1
+// checkShimShadowing detects when a managed tool resolves to a binary that is
+// not driftr's shim — i.e. another install (Homebrew, Volta, asdf, …) sits
+// earlier in PATH and wins. driftr can pin and resolve correctly, but the
+// shadowing binary is what the shell actually runs, so the pin appears ignored.
+//
+// Only runs when the shim dir is on PATH at all; otherwise checkPath already
+// reported the root problem and this would be redundant noise.
+func checkShimShadowing(binDir string) int {
+	if !binDirOnPath(binDir) {
+		return 0
+	}
+
+	shimDir := filepath.Clean(binDir)
+	shadowed := 0
+	for _, tool := range versionedTools {
+		resolved, err := exec.LookPath(tool)
+		if err != nil {
+			continue // tool not on PATH anywhere — nothing to shadow
+		}
+		if filepath.Dir(filepath.Clean(resolved)) == shimDir {
+			continue // driftr shim wins
+		}
+		warn(fmt.Sprintf("%s resolves to %s, not the driftr shim — pins/defaults won't apply", tool, resolved))
+		shadowed++
+	}
+
+	if shadowed > 0 {
+		warn("  another install earlier in PATH is shadowing driftr — put ~/.driftr/bin first")
+		warn("  (e.g. append the PATH export to the end of ~/.zshrc, or remove the conflicting tool)")
+	}
+	return shadowed
 }
 
 // checkShellRCPlacement verifies that binDir is exported from a shell rc file
