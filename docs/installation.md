@@ -73,7 +73,7 @@ echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.zshrc
 echo 'export PATH="$HOME/.driftr/bin:$PATH"' >> ~/.bash_profile
 ```
 
-Or run `driftr doctor --fix` to configure PATH automatically for your shell. Run `driftr doctor` to verify your setup.
+Or let Driftr do it for you: `driftr setup` and `driftr doctor --fix` both configure the universal file *and*, when they detect that another install (Homebrew, Volta, …) is shadowing the shims, append a PATH precedence guard to your interactive rc (`~/.zshrc`, `~/.bashrc`, or fish `config.fish`) so the shims win. Run `driftr doctor` to verify your setup.
 
 ### Upgrading
 
