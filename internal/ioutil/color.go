@@ -74,8 +74,9 @@ func Title(s string) string { return Bold(Cyan(s)) }
 // Success prefixes a green check mark.
 func Success(s string) string { return Green("✓ ") + s }
 
-// Warn prefixes a yellow warning sign.
-func Warn(s string) string { return Yellow("⚠ " + s) }
+// Warn prefixes a yellow warning sign, matching Success/Failure which color
+// only the marker and leave the message in the default weight.
+func Warn(s string) string { return Yellow("⚠ ") + s }
 
 // Failure prefixes a red cross.
 func Failure(s string) string { return Red("✗ ") + s }

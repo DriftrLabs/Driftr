@@ -29,12 +29,17 @@ func newWhichCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("%s %s\n", ioutil.Label("Tool:   "), tool)
-			fmt.Printf("%s %s\n", ioutil.Label("Version:"), ioutil.Bold(res.Version))
-			fmt.Printf("%s %s\n", ioutil.Label("Binary: "), ioutil.Green(binPath))
-			fmt.Printf("%s %s\n", ioutil.Label("Source: "), res.Source)
+			row := func(label, value string) {
+				// Pad the plain label before coloring so the (runtime zero-width)
+				// ANSI codes don't throw off column alignment.
+				fmt.Printf("%s %s\n", ioutil.Label(fmt.Sprintf("%-8s", label)), value)
+			}
+			row("Tool:", tool)
+			row("Version:", ioutil.Bold(res.Version))
+			row("Binary:", ioutil.Green(binPath))
+			row("Source:", fmt.Sprint(res.Source))
 			if res.ProjectDir != "" {
-				fmt.Printf("%s %s\n", ioutil.Label("Project:"), res.ProjectDir)
+				row("Project:", res.ProjectDir)
 			}
 
 			return nil
