@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/resolver"
 )
@@ -28,12 +29,12 @@ func newWhichCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Tool:    %s\n", tool)
-			fmt.Printf("Version: %s\n", res.Version)
-			fmt.Printf("Binary:  %s\n", binPath)
-			fmt.Printf("Source:  %s\n", res.Source)
+			fmt.Printf("%s %s\n", ioutil.Label("Tool:   "), tool)
+			fmt.Printf("%s %s\n", ioutil.Label("Version:"), ioutil.Bold(res.Version))
+			fmt.Printf("%s %s\n", ioutil.Label("Binary: "), ioutil.Green(binPath))
+			fmt.Printf("%s %s\n", ioutil.Label("Source: "), res.Source)
 			if res.ProjectDir != "" {
-				fmt.Printf("Project: %s\n", res.ProjectDir)
+				fmt.Printf("%s %s\n", ioutil.Label("Project:"), res.ProjectDir)
 			}
 
 			return nil

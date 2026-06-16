@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/DriftrLabs/driftr/internal/config"
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/platform"
 	"github.com/DriftrLabs/driftr/internal/version"
 )
@@ -54,29 +55,29 @@ func newUninstallCmd() *cobra.Command {
 			// Warn if this is the global default.
 			cfg, err := config.LoadGlobal()
 			if err == nil && cfg.Default.GetTool(tool) == versionStr {
-				fmt.Printf("Warning: %s %s is the current global default. Run `driftr default %s@<version>` to set a new one.\n", tool, versionStr, tool)
+				fmt.Println(ioutil.Warn(fmt.Sprintf("%s %s is the current global default. Run `driftr default %s@<version>` to set a new one.", tool, versionStr, tool)))
 			}
 
 			// Warn if this version is pinned in the project config.
 			cwd, cwdErr := os.Getwd()
 			if cwdErr == nil {
 				if proj, err := config.LoadProject(cwd); err == nil && proj != nil && proj.Tools.GetTool(tool) == versionStr {
-					fmt.Printf("Warning: %s@%s is pinned in .driftr.toml — uninstalling will break this project until you run 'driftr install %s@%s' or update the pin\n", tool, versionStr, tool, versionStr)
+					fmt.Println(ioutil.Warn(fmt.Sprintf("%s@%s is pinned in .driftr.toml — uninstalling will break this project until you run 'driftr install %s@%s' or update the pin", tool, versionStr, tool, versionStr)))
 				}
 				if pkg, err := config.LoadPackageJSON(cwd); err == nil && pkg != nil && pkg.Driftr.GetTool(tool) == versionStr {
-					fmt.Printf("Warning: %s@%s is pinned in package.json — uninstalling will break this project until you run 'driftr install %s@%s' or update the pin\n", tool, versionStr, tool, versionStr)
+					fmt.Println(ioutil.Warn(fmt.Sprintf("%s@%s is pinned in package.json — uninstalling will break this project until you run 'driftr install %s@%s' or update the pin", tool, versionStr, tool, versionStr)))
 				}
 			}
 
 			if verbose {
-				fmt.Printf("  Removing: %s\n", versionDir)
+				fmt.Println(ioutil.Dim(fmt.Sprintf("  Removing: %s", versionDir)))
 			}
 
 			if err := os.RemoveAll(versionDir); err != nil {
 				return fmt.Errorf("failed to remove %s %s: %w. Manual cleanup: rm -rf %q", tool, versionStr, err, versionDir)
 			}
 
-			fmt.Printf("Uninstalled %s %s\n", tool, versionStr)
+			fmt.Println(ioutil.Success(fmt.Sprintf("Uninstalled %s %s", tool, ioutil.Bold(versionStr))))
 			return nil
 		},
 	}

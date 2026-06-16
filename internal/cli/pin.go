@@ -126,7 +126,7 @@ func savePin(dir, tool, versionStr string, format pinFormat) error {
 		if err := config.SavePackageJSONTool(dir, tool, versionStr); err != nil {
 			return err
 		}
-		fmt.Printf("Pinned %s %s in %s/package.json\n", tool, versionStr, dir)
+		fmt.Println(ioutil.Success(fmt.Sprintf("Pinned %s %s in %s/package.json", tool, ioutil.Bold(versionStr), dir)))
 	default:
 		cfg, err := config.LoadProject(dir)
 		if err != nil {
@@ -139,7 +139,7 @@ func savePin(dir, tool, versionStr string, format pinFormat) error {
 		if err := config.SaveProject(dir, cfg); err != nil {
 			return err
 		}
-		fmt.Printf("Pinned %s %s in %s/%s\n", tool, versionStr, dir, config.ProjectConfigFile)
+		fmt.Println(ioutil.Success(fmt.Sprintf("Pinned %s %s in %s/%s", tool, ioutil.Bold(versionStr), dir, config.ProjectConfigFile)))
 	}
 	return nil
 }
@@ -155,7 +155,7 @@ func migratePin(dir, tool, versionStr string, current pinFormat) error {
 		if err := os.Remove(filepath.Join(dir, config.ProjectConfigFile)); err != nil {
 			return fmt.Errorf("migrated to package.json but failed to remove %s: %w. Remove it manually — it takes precedence over package.json", config.ProjectConfigFile, err)
 		}
-		fmt.Printf("Migrated %s %s from %s to package.json\n", tool, versionStr, config.ProjectConfigFile)
+		fmt.Println(ioutil.Success(fmt.Sprintf("Migrated %s %s from %s to package.json", tool, ioutil.Bold(versionStr), config.ProjectConfigFile)))
 
 	case formatPackageJSON:
 		// Migrate package.json → TOML.
@@ -167,7 +167,7 @@ func migratePin(dir, tool, versionStr string, current pinFormat) error {
 		if err := config.RemoveDriftrFromPackageJSON(dir); err != nil {
 			return err
 		}
-		fmt.Printf("Migrated %s %s from package.json to %s\n", tool, versionStr, config.ProjectConfigFile)
+		fmt.Println(ioutil.Success(fmt.Sprintf("Migrated %s %s from package.json to %s", tool, ioutil.Bold(versionStr), config.ProjectConfigFile)))
 
 	case formatNone:
 		return fmt.Errorf("no existing config to migrate. Run `driftr pin %s@<version>` first", tool)

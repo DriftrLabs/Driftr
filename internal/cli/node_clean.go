@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/DriftrLabs/driftr/internal/ioutil"
 	"github.com/DriftrLabs/driftr/internal/nodeenv"
 )
 
@@ -46,15 +47,16 @@ func runNodeClean(p *nodeenv.Pnpm, projectDir string, doExecute bool, w io.Write
 	size, _ := nodeenv.DirSize(nodeModules)
 
 	if !doExecute {
-		fmt.Fprintln(w, "Dry run — no changes made. Re-run with --yes to execute.")
+		fmt.Fprintln(w, ioutil.Title("Dry run"))
+		fmt.Fprintln(w, ioutil.Dim("No changes made. Re-run with --yes to execute."))
 		fmt.Fprintln(w)
 		if hasNodeModules {
-			fmt.Fprintf(w, "Would remove: %s (%s)\n", nodeModules, formatSize(size))
-			fmt.Fprintln(w, "Would run:    pnpm install")
+			fmt.Fprintf(w, "Would remove: %s %s\n", nodeModules, ioutil.Dim("("+formatSize(size)+")"))
+			fmt.Fprintf(w, "Would run:    %s\n", ioutil.Bold("pnpm install"))
 		} else {
-			fmt.Fprintln(w, "No node_modules to remove.")
+			fmt.Fprintln(w, ioutil.Bullet("no node_modules to remove"))
 		}
-		fmt.Fprintln(w, "Would run:    pnpm store prune")
+		fmt.Fprintf(w, "Would run:    %s\n", ioutil.Bold("pnpm store prune"))
 		return nil
 	}
 
@@ -62,16 +64,16 @@ func runNodeClean(p *nodeenv.Pnpm, projectDir string, doExecute bool, w io.Write
 		if err := os.RemoveAll(nodeModules); err != nil {
 			return fmt.Errorf("removing node_modules: %w", err)
 		}
-		fmt.Fprintf(w, "✓ removed node_modules (%s)\n", formatSize(size))
+		fmt.Fprintln(w, ioutil.Success("removed node_modules "+ioutil.Dim("("+formatSize(size)+")")))
 	} else {
-		fmt.Fprintln(w, "• no node_modules to remove")
+		fmt.Fprintln(w, ioutil.Bullet("no node_modules to remove"))
 	}
 
 	// Reinstall and prune require pnpm. If it is missing, the node_modules
 	// removal above still succeeded — warn rather than fail outright.
 	if !p.Installed() {
-		fmt.Fprintln(w, "⚠ pnpm not found — skipped reinstall and store prune.")
-		fmt.Fprintln(w, "  Run 'corepack enable', then 'pnpm install' to restore dependencies.")
+		fmt.Fprintln(w, ioutil.Warn("pnpm not found — skipped reinstall and store prune."))
+		fmt.Fprintln(w, ioutil.Dim("  Run 'corepack enable', then 'pnpm install' to restore dependencies."))
 		return nil
 	}
 
@@ -80,12 +82,12 @@ func runNodeClean(p *nodeenv.Pnpm, projectDir string, doExecute bool, w io.Write
 		if _, err := p.Install(); err != nil {
 			return fmt.Errorf("pnpm install failed: %w", err)
 		}
-		fmt.Fprintln(w, "✓ dependencies reinstalled")
+		fmt.Fprintln(w, ioutil.Success("dependencies reinstalled"))
 	}
 
 	if _, err := p.StorePrune(); err != nil {
 		return fmt.Errorf("pnpm store prune failed: %w", err)
 	}
-	fmt.Fprintln(w, "✓ pruned orphaned packages from the shared store")
+	fmt.Fprintln(w, ioutil.Success("pruned orphaned packages from the shared store"))
 	return nil
 }
