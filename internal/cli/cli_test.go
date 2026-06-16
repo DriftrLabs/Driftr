@@ -242,6 +242,30 @@ func TestListCmd_Empty(t *testing.T) {
 	}
 }
 
+func TestSetupCmd_ConfiguresPathInUniversalRcFile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("SHELL", "/bin/zsh")
+
+	if err := runCmd(t, "setup"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// zsh's universal rc file is .zshenv (sourced by every shell), not the
+	// interactive-only .zshrc.
+	zshenv := filepath.Join(home, ".zshenv")
+	data, err := os.ReadFile(zshenv)
+	if err != nil {
+		t.Fatalf("expected PATH written to .zshenv: %v", err)
+	}
+	if !strings.Contains(string(data), filepath.Join(home, ".driftr", "bin")) {
+		t.Errorf(".zshenv missing driftr bin PATH export: %q", data)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".zshrc")); err == nil {
+		t.Errorf("setup must not create/use interactive-only .zshrc")
+	}
+}
+
 func TestInstallCmd_TrailingAtErrors(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
