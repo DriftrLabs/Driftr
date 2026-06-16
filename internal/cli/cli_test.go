@@ -241,3 +241,14 @@ func TestListCmd_Empty(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+func TestInstallCmd_TrailingAtErrors(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	// "pnpm@" is a malformed spec — an explicit "@" with no version. It must
+	// error (offline, before any download) rather than installing latest.
+	err := runCmd(t, "install", "pnpm@")
+	if err == nil || !strings.Contains(err.Error(), "version required after '@'") {
+		t.Errorf("expected version-required error for 'pnpm@', got: %v", err)
+	}
+}
