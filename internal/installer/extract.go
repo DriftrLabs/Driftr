@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -143,8 +144,8 @@ func Extract(archivePath, version string, verbose bool) error {
 		matched = true
 
 		// Strip the archive prefix to get the relative path.
-		relPath := strings.TrimPrefix(name, prefix)
-		if relPath == "" {
+		relPath := path.Clean(strings.TrimPrefix(name, prefix))
+		if relPath == "" || relPath == "." {
 			continue
 		}
 
