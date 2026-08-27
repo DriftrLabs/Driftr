@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 func TestLoadGlobal_NoDirExists(t *testing.T) {

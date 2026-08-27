@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DriftrLabs/driftr/internal/ioutil"
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/ioutil"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 const defaultNodeDistBaseURL = "https://nodejs.org/dist"

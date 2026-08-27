@@ -59,4 +59,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/DriftrLabs/driftr
+        - github.com/stackmade/driftr

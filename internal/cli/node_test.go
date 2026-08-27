@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DriftrLabs/driftr/internal/nodeenv"
+	"github.com/stackmade/driftr/internal/nodeenv"
 )
 
 // stubRunner implements nodeenv.Runner for command-level tests.

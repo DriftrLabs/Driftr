@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/DriftrLabs/driftr/internal/ioutil"
-	"github.com/DriftrLabs/driftr/internal/platform"
-	"github.com/DriftrLabs/driftr/internal/resolver"
+	"github.com/stackmade/driftr/internal/ioutil"
+	"github.com/stackmade/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/resolver"
 )
 
 func newWhichCmd() *cobra.Command {

@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/DriftrLabs/driftr/internal/installer"
-	"github.com/DriftrLabs/driftr/internal/ioutil"
+	"github.com/stackmade/driftr/internal/installer"
+	"github.com/stackmade/driftr/internal/ioutil"
 )
 
 func newInstallCmd() *cobra.Command {

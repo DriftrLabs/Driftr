@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DriftrLabs/driftr/internal/config"
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/config"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 // fakeNodeInstall creates a fake installed node version under $HOME/.driftr.

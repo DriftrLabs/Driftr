@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/DriftrLabs/driftr/internal/config"
-	"github.com/DriftrLabs/driftr/internal/platform"
-	"github.com/DriftrLabs/driftr/internal/version"
+	"github.com/stackmade/driftr/internal/config"
+	"github.com/stackmade/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/version"
 )
 
 // RequireInstalled verifies a version string parses correctly and the version is installed.

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 // swapHTTPClient routes all installer HTTP traffic to the test server.

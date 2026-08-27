@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DriftrLabs/driftr/internal/config"
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/config"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 // setupFakeInstall creates a fake tool installation with a binary file.

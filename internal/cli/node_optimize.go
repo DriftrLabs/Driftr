@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/DriftrLabs/driftr/internal/ioutil"
-	"github.com/DriftrLabs/driftr/internal/nodeenv"
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/ioutil"
+	"github.com/stackmade/driftr/internal/nodeenv"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 func newNodeOptimizeCmd() *cobra.Command {

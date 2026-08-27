@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 // extractToRoot extracts a tar entry into an os.Root-sandboxed directory.

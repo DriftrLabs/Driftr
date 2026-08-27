@@ -10,8 +10,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/DriftrLabs/driftr/internal/platform"
-	"github.com/DriftrLabs/driftr/internal/version"
+	"github.com/stackmade/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/version"
 )
 
 // installCleanup tracks resources that need cleanup if the install is

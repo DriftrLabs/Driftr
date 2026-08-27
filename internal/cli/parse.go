@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 // parseToolVersion splits "node@24.0.0" into ("node", "24.0.0").

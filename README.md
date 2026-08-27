@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://codecov.io/gh/DriftrLabs/Driftr"><img src="https://codecov.io/gh/DriftrLabs/Driftr/branch/main/graph/badge.svg" alt="codecov" /></a>
+  <a href="https://codecov.io/gh/StackMade/Driftr"><img src="https://codecov.io/gh/StackMade/Driftr/branch/main/graph/badge.svg" alt="codecov" /></a>
 </p>
 
 ---
@@ -23,7 +23,7 @@
 
 [Volta is no longer maintained.](https://github.com/volta-cli/volta/issues/2080) If you liked Volta's "pin and forget" model -- where `node`, `pnpm`, and `yarn` just work without manual switching -- Driftr carries that torch forward.
 
-Driftr is a new project. It doesn't have Volta's years of polish or fnm's community size. But it has a clean foundation, an honest design, and an active maintainer who actually uses it. If you're looking for something simple that does the job, give it a try. If it's missing something you need, [open an issue](https://github.com/DriftrLabs/Driftr/issues) -- we're listening.
+Driftr is a new project. It doesn't have Volta's years of polish or fnm's community size. But it has a clean foundation, an honest design, and an active maintainer who actually uses it. If you're looking for something simple that does the job, give it a try. If it's missing something you need, [open an issue](https://github.com/StackMade/Driftr/issues) -- we're listening.
 
 - **Multi-tool** -- manages Node.js, pnpm, and yarn from a single CLI
 - **Shim-based** -- `node`, `npm`, `npx`, `pnpm`, `pnpx`, and `yarn` just work, resolved per-project or globally
@@ -38,7 +38,7 @@ Driftr is a new project. It doesn't have Volta's years of polish or fnm's commun
 ### Homebrew (macOS and Linux)
 
 ```bash
-brew tap DriftrLabs/driftr
+brew tap StackMade/driftr
 brew install driftr
 ```
 
@@ -47,7 +47,7 @@ After installing, run `driftr setup` — it generates the shims and configures y
 ### Quick Install (curl)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/StackMade/driftr/main/install.sh | sh
 ```
 
 This downloads the latest release, verifies its checksum, and configures your PATH automatically. See [docs/installation.md](docs/installation.md) for all installation methods.

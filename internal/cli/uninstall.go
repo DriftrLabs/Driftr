@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/DriftrLabs/driftr/internal/config"
-	"github.com/DriftrLabs/driftr/internal/ioutil"
-	"github.com/DriftrLabs/driftr/internal/platform"
-	"github.com/DriftrLabs/driftr/internal/version"
+	"github.com/stackmade/driftr/internal/config"
+	"github.com/stackmade/driftr/internal/ioutil"
+	"github.com/stackmade/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/version"
 )
 
 func newUninstallCmd() *cobra.Command {

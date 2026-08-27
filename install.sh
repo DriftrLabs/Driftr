@@ -2,7 +2,7 @@
 # Driftr installer — downloads the latest release from GitHub and sets up PATH.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/StackMade/driftr/main/install.sh | sh
 #
 # Environment variables:
 #   DRIFTR_VERSION     — pin a specific version (e.g. "0.1.0"), default: latest
@@ -10,7 +10,7 @@
 
 set -eu
 
-REPO="DriftrLabs/driftr"
+REPO="StackMade/driftr"
 DEFAULT_INSTALL_DIR="$HOME/.driftr/bin"
 INSTALL_DIR="${DRIFTR_INSTALL_DIR:-$DEFAULT_INSTALL_DIR}"
 

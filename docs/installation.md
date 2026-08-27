@@ -5,7 +5,7 @@
 Run the installer script to download the latest release, verify its checksum, and set up your PATH:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/StackMade/driftr/main/install.sh | sh
 ```
 
 The script:
@@ -22,25 +22,25 @@ The script:
 Pin a specific version:
 
 ```bash
-DRIFTR_VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+DRIFTR_VERSION=0.1.0 curl -fsSL https://raw.githubusercontent.com/StackMade/driftr/main/install.sh | sh
 ```
 
 Override the install directory:
 
 ```bash
-DRIFTR_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+DRIFTR_INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/StackMade/driftr/main/install.sh | sh
 ```
 
 ### Using wget
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/DriftrLabs/driftr/main/install.sh | sh
+wget -qO- https://raw.githubusercontent.com/StackMade/driftr/main/install.sh | sh
 ```
 
 ## Homebrew (macOS and Linux)
 
 ```bash
-brew tap DriftrLabs/driftr
+brew tap StackMade/driftr
 brew install driftr
 ```
 
@@ -103,7 +103,7 @@ Driftr is written in Go. You need Go 1.26 or later to build it.
 ### Clone and Build
 
 ```bash
-git clone https://github.com/DriftrLabs/driftr.git
+git clone https://github.com/StackMade/driftr.git
 cd driftr
 go build -o driftr ./cmd/driftr/
 ```
@@ -119,7 +119,7 @@ sudo mv driftr /usr/local/bin/
 Or install it directly with Go:
 
 ```bash
-go install github.com/DriftrLabs/driftr/cmd/driftr@latest
+go install github.com/stackmade/driftr/cmd/driftr@latest
 ```
 
 ## Initial Setup

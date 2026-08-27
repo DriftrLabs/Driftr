@@ -13,9 +13,9 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/DriftrLabs/driftr/internal/cli.Version={{.Version}}
-      - -X github.com/DriftrLabs/driftr/internal/cli.Commit={{.ShortCommit}}
-      - -X github.com/DriftrLabs/driftr/internal/cli.Date={{.Date}}
+      - -X github.com/stackmade/driftr/internal/cli.Version={{.Version}}
+      - -X github.com/stackmade/driftr/internal/cli.Commit={{.ShortCommit}}
+      - -X github.com/stackmade/driftr/internal/cli.Date={{.Date}}
 
 archives:
   - format: tar.gz
@@ -25,12 +25,12 @@ archives:
 brews:
   - name: driftr
     repository:
-      owner: DriftrLabs
+      owner: StackMade
       name: homebrew-driftr
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
-    homepage: "https://github.com/DriftrLabs/driftr"
+    homepage: "https://github.com/StackMade/driftr"
     description: "Fast JavaScript toolchain versioning without the friction"
     license: "MIT"
     skip_upload: auto
@@ -59,7 +59,7 @@ checksum:
 # Keyless (Sigstore) signature of the checksums file, in the cosign v3
 # bundle format. Verify with:
 #   cosign verify-blob --bundle checksums.txt.sigstore.json \
-#     --certificate-identity-regexp 'github.com/DriftrLabs/driftr' \
+#     --certificate-identity-regexp 'github.com/StackMade/driftr' \
 #     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
 #     checksums.txt
 signs:

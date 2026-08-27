@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/DriftrLabs/driftr/internal/version"
+	"github.com/stackmade/driftr/internal/version"
 )
 
 func TestParseSRI_Valid(t *testing.T) {

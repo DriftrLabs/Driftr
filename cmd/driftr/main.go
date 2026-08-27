@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DriftrLabs/driftr/internal/cli"
-	"github.com/DriftrLabs/driftr/internal/process"
-	"github.com/DriftrLabs/driftr/internal/resolver"
+	"github.com/stackmade/driftr/internal/cli"
+	"github.com/stackmade/driftr/internal/process"
+	"github.com/stackmade/driftr/internal/resolver"
 )
 
 func main() {

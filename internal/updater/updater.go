@@ -16,11 +16,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/DriftrLabs/driftr/internal/ioutil"
+	"github.com/stackmade/driftr/internal/ioutil"
 )
 
 const (
-	repo                    = "DriftrLabs/driftr"
+	repo                    = "stackmade/driftr"
 	apiBaseURL              = "https://api.github.com/repos/" + repo
 	maxUpdaterDownloadBytes = 50 * 1024 * 1024 // 50 MB
 )

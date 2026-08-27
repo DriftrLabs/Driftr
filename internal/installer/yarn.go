@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/DriftrLabs/driftr/internal/platform"
-	"github.com/DriftrLabs/driftr/internal/version"
+	"github.com/stackmade/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/version"
 )
 
 // InstallYarn downloads and installs a yarn version from the npm registry.

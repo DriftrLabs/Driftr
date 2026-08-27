@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/DriftrLabs/driftr/internal/process"
-	"github.com/DriftrLabs/driftr/internal/resolver"
+	"github.com/stackmade/driftr/internal/process"
+	"github.com/stackmade/driftr/internal/resolver"
 )
 
 func newRunCmd() *cobra.Command {

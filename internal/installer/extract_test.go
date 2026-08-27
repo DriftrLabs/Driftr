@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/DriftrLabs/driftr/internal/platform"
+	"github.com/stackmade/driftr/internal/platform"
 )
 
 // tarEntry describes one entry for buildTarGz. Link is the symlink target
