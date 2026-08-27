@@ -4,7 +4,21 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      go-dependencies:
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      github-actions:
+        update-types:
+          - minor
+          - patch
