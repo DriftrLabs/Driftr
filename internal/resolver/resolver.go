@@ -126,6 +126,7 @@ const (
 	SourcePackageJSON        // package.json driftr key
 	SourceNvmrc              // .nvmrc
 	SourceNodeVersion        // .node-version
+	SourcePackageManager     // package.json "packageManager" field
 	SourceGlobal
 )
 
@@ -141,6 +142,8 @@ func (s Source) String() string {
 		return ".nvmrc"
 	case SourceNodeVersion:
 		return ".node-version"
+	case SourcePackageManager:
+		return "package.json (packageManager)"
 	case SourceGlobal:
 		return "global default"
 	default:
@@ -282,6 +285,15 @@ func resolveFromProject(tool, dir string, verbose bool) (*Resolution, error) {
 		if pkg != nil {
 			if ver := pkg.Driftr.GetTool(tool); ver != "" {
 				return resolveProjectVersion(tool, ver, current, SourcePackageJSON)
+			}
+			// Standard "packageManager" field (corepack/npm convention), e.g.
+			// "pnpm@9.15.0". Only meaningful for tools with their own
+			// independently pinned version — node's own version isn't
+			// expressed this way, and npm/npx always follow node.
+			if tool == "pnpm" || tool == "yarn" {
+				if pmTool, pmVer := pkg.PackageManagerTool(); pmTool == tool && pmVer != "" {
+					return resolveProjectVersion(tool, pmVer, current, SourcePackageManager)
+				}
 			}
 		}
 

@@ -338,6 +338,91 @@ func TestResolveBinaryFull_ExplicitPinsNodeNotTool(t *testing.T) {
 	}
 }
 
+func TestResolveTool_PackageManagerField(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	setupFakeInstall(t, home, "pnpm", "9.15.0")
+
+	projectDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(projectDir, "package.json"),
+		[]byte(`{"name":"app","packageManager":"pnpm@9.15.0"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(projectDir)
+
+	res, err := ResolveTool("pnpm", "", false)
+	if err != nil {
+		t.Fatalf("ResolveTool(pnpm) error: %v", err)
+	}
+	if res.Version != "9.15.0" {
+		t.Errorf("version = %q, want %q", res.Version, "9.15.0")
+	}
+	if res.Source != SourcePackageManager {
+		t.Errorf("source = %v, want SourcePackageManager", res.Source)
+	}
+}
+
+func TestResolveTool_DriftrKeyBeatsPackageManagerField(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	setupFakeInstall(t, home, "pnpm", "9.15.0")
+	setupFakeInstall(t, home, "pnpm", "8.0.0")
+
+	projectDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(projectDir, "package.json"),
+		[]byte(`{"name":"app","packageManager":"pnpm@8.0.0","driftr":{"pnpm":"9.15.0"}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(projectDir)
+
+	res, err := ResolveTool("pnpm", "", false)
+	if err != nil {
+		t.Fatalf("ResolveTool(pnpm) error: %v", err)
+	}
+	if res.Version != "9.15.0" {
+		t.Errorf("version = %q, want %q (driftr key must win over packageManager field)", res.Version, "9.15.0")
+	}
+	if res.Source != SourcePackageJSON {
+		t.Errorf("source = %v, want SourcePackageJSON", res.Source)
+	}
+}
+
+func TestResolveTool_PackageManagerFieldIgnoredForNode(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	setupFakeInstall(t, home, "node", "22.14.0")
+
+	globalCfg, _ := config.LoadGlobal()
+	globalCfg.Default.SetTool("node", "22.14.0")
+	config.SaveGlobal(globalCfg)
+
+	projectDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(projectDir, "package.json"),
+		[]byte(`{"name":"app","packageManager":"pnpm@9.15.0"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(projectDir)
+
+	// A packageManager field naming pnpm must not affect node resolution —
+	// it should fall through to the global default.
+	res, err := ResolveTool("node", "", false)
+	if err != nil {
+		t.Fatalf("ResolveTool(node) error: %v", err)
+	}
+	if res.Source != SourceGlobal {
+		t.Errorf("source = %v, want SourceGlobal", res.Source)
+	}
+}
+
 func TestSourceString(t *testing.T) {
 	tests := []struct {
 		source Source

@@ -101,8 +101,9 @@ When resolving a version, Driftr walks up from the current directory to the file
 
 1. `.driftr.toml`
 2. `package.json` (driftr key)
-3. `.nvmrc` (node only)
-4. `.node-version` (node only)
+3. `package.json` (`packageManager` field, e.g. `"packageManager": "pnpm@9.15.0"` — pnpm/yarn only)
+4. `.nvmrc` (node only)
+5. `.node-version` (node only)
 
 ```
 /home/user/my-project/packages/core/   <- cwd, no config
@@ -110,7 +111,7 @@ When resolving a version, Driftr walks up from the current directory to the file
 /home/user/my-project/                 <- .driftr.toml found! uses this
 ```
 
-If multiple config files exist in the same directory, the priority order above applies. `.nvmrc` and `.node-version` are only used for Node.js version resolution — pnpm and yarn versions must be configured via `.driftr.toml` or `package.json`.
+If multiple config files exist in the same directory, the priority order above applies. `.nvmrc` and `.node-version` are only used for Node.js version resolution. The `packageManager` field is read for pnpm and yarn only (not node, since npm/npx always follow node's own version and node has no equivalent standard field); it must name an exact installed version, same as the `driftr` key — it's read-only, Driftr never writes it.
 
 **Note:** LTS aliases (`lts/*`, `lts/hydrogen`) in `.nvmrc` are not supported and will be skipped.
 

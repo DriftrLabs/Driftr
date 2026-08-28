@@ -31,6 +31,48 @@ func TestLoadPackageJSON_DriftrNode(t *testing.T) {
 	}
 }
 
+func TestLoadPackageJSON_PackageManagerOnly(t *testing.T) {
+	dir := t.TempDir()
+	writePackageJSON(t, dir, `{"name": "myapp", "packageManager": "pnpm@9.15.0"}`)
+
+	pkg, err := LoadPackageJSON(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if pkg == nil {
+		t.Fatal("expected non-nil result when only packageManager is set")
+	}
+	tool, ver := pkg.PackageManagerTool()
+	if tool != "pnpm" || ver != "9.15.0" {
+		t.Errorf("PackageManagerTool() = (%q, %q), want (pnpm, 9.15.0)", tool, ver)
+	}
+}
+
+func TestPackageManagerTool(t *testing.T) {
+	tests := []struct {
+		field    string
+		wantTool string
+		wantVer  string
+	}{
+		{"pnpm@9.15.0", "pnpm", "9.15.0"},
+		{"yarn@1.22.22", "yarn", "1.22.22"},
+		{"yarn@1.22.22+sha512.abcdef", "yarn", "1.22.22"},
+		{"", "", ""},
+		{"pnpm", "", ""},
+		{"pnpm@", "", ""},
+		{"@9.15.0", "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.field, func(t *testing.T) {
+			pkg := &PackageJSON{PackageManager: tt.field}
+			tool, ver := pkg.PackageManagerTool()
+			if tool != tt.wantTool || ver != tt.wantVer {
+				t.Errorf("PackageManagerTool() = (%q, %q), want (%q, %q)", tool, ver, tt.wantTool, tt.wantVer)
+			}
+		})
+	}
+}
+
 func TestLoadPackageJSON_NoDriftr(t *testing.T) {
 	dir := t.TempDir()
 	writePackageJSON(t, dir, `{"name": "myapp", "version": "1.0.0"}`)

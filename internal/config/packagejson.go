@@ -7,11 +7,31 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // PackageJSON represents the relevant fields from a package.json file.
 type PackageJSON struct {
-	Driftr DriftrConfig `json:"driftr"`
+	Driftr         DriftrConfig `json:"driftr"`
+	PackageManager string       `json:"packageManager"`
+}
+
+// PackageManagerTool parses the standard "packageManager" field (e.g.
+// "pnpm@9.15.0" or "yarn@1.22.22+sha512.abc..."), used by corepack and npm.
+// Returns ("", "") if the field is absent or malformed.
+func (p *PackageJSON) PackageManagerTool() (tool, ver string) {
+	if p == nil || p.PackageManager == "" {
+		return "", ""
+	}
+	name, rest, ok := strings.Cut(p.PackageManager, "@")
+	if !ok || name == "" || rest == "" {
+		return "", ""
+	}
+	ver, _, _ = strings.Cut(rest, "+") // strip the optional integrity hash suffix
+	if ver == "" {
+		return "", ""
+	}
+	return name, ver
 }
 
 // DriftrConfig holds the Driftr tool pinning from package.json.
@@ -60,7 +80,7 @@ func LoadPackageJSON(dir string) (*PackageJSON, error) {
 	}
 
 	// Return nil if no tool versions are configured.
-	if !pkg.Driftr.hasVersions() {
+	if !pkg.Driftr.hasVersions() && pkg.PackageManager == "" {
 		return nil, nil
 	}
 

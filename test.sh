@@ -194,6 +194,16 @@ check_output "yarn resolves to installed version" "$YARN_INSTALLED" driftr which
 check_output "yarn shim execs yarn.js via node" "yarn.js" "$HOME/.driftr/bin/yarn" -v
 echo
 
+# ── 15b. package.json packageManager Field ──
+echo -e "${BLUE}[15b] packageManager Field${NC}"
+mkdir -p /tmp/test-pkgmanager && cd /tmp/test-pkgmanager || exit 1
+echo "{\"name\": \"app\", \"packageManager\": \"pnpm@$PNPM_INSTALLED\"}" > package.json
+check_output "packageManager field resolves pnpm version" "$PNPM_INSTALLED" driftr which pnpm
+check_output "which shows packageManager source" "packageManager" driftr which pnpm
+check_output "packageManager field ignored for node" "global default" driftr which node
+cd /home/driftr || exit 1
+echo
+
 # ── 16. Uninstall ────────────────────────────
 echo -e "${BLUE}[16] Uninstall${NC}"
 check "driftr uninstall pnpm@\$PNPM_INSTALLED succeeds" driftr uninstall "pnpm@$PNPM_INSTALLED"
