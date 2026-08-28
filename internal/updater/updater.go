@@ -174,11 +174,13 @@ func verifyChecksum(archivePath, checksumsPath string) error {
 
 	var expected string
 	for _, line := range strings.Split(string(data), "\n") {
-		if strings.Contains(line, archiveName) {
-			parts := strings.Fields(line)
-			if len(parts) >= 1 {
-				expected = parts[0]
-			}
+		// Format: "<hash>  <filename>"
+		parts := strings.SplitN(line, "  ", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		if strings.TrimSpace(parts[1]) == archiveName {
+			expected = strings.TrimSpace(parts[0])
 			break
 		}
 	}
