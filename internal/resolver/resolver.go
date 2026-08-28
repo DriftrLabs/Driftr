@@ -400,7 +400,18 @@ func ResolveBinaryFull(tool string, explicit string) (*ResolvedBinary, error) {
 		resolveTool = parent
 	}
 
-	res, err := ResolveTool(resolveTool, explicit, false)
+	// Standalone tools that need Node.js (yarn, pnpm) resolve their own
+	// version independently of `explicit` — explicit always pins Node.js,
+	// per the --node flag it comes from.
+	entry, hasEntry := platform.LookupTool(tool)
+	standaloneNeedsNode := hasEntry && entry.NeedsNode && resolveTool != "node"
+
+	toolExplicit := explicit
+	if standaloneNeedsNode {
+		toolExplicit = ""
+	}
+
+	res, err := ResolveTool(resolveTool, toolExplicit, false)
 	if err != nil {
 		return nil, err
 	}
@@ -412,10 +423,8 @@ func ResolveBinaryFull(tool string, explicit string) (*ResolvedBinary, error) {
 
 	rb := &ResolvedBinary{ToolPath: toolPath}
 
-	// Check if this tool needs Node.js to execute.
-	entry, ok := platform.LookupTool(tool)
-	if ok && entry.NeedsNode {
-		nodeRes, err := ResolveTool("node", "", false)
+	if standaloneNeedsNode {
+		nodeRes, err := ResolveTool("node", explicit, false)
 		if err != nil {
 			return nil, fmt.Errorf("%s requires Node.js: %w", tool, err)
 		}
