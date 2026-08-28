@@ -14,7 +14,7 @@ func newInstallCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "install <tool[@version]>",
 		Short: "Install a tool version",
-		Long:  "Download and install a tool version.\n\nA bare tool name installs the newest release.\n\nExamples:\n  driftr install pnpm        # latest pnpm\n  driftr install node        # latest node\n  driftr install node@24\n  driftr install pnpm@9\n  driftr install yarn@1\n  driftr install node@latest",
+		Long:  "Download and install a tool version.\n\nA bare tool name installs the newest release.\n\nExamples:\n  driftr install pnpm        # latest pnpm\n  driftr install node        # latest node\n  driftr install node@24\n  driftr install pnpm@9\n  driftr install yarn@1\n  driftr install node@latest\n  driftr install node@lts    # newest LTS release (node only)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			raw := args[0]

@@ -67,7 +67,19 @@ func (c *installCleanup) run() {
 // NodeRelease represents a single Node.js release from the index.
 type NodeRelease struct {
 	Version string `json:"version"`
-	LTS     any    `json:"lts"`
+	LTS     any    `json:"lts"` // false, or the LTS codename string (e.g. "Jod")
+}
+
+// IsLTS reports whether this release is an LTS release.
+func (r NodeRelease) IsLTS() bool {
+	switch lts := r.LTS.(type) {
+	case string:
+		return lts != ""
+	case bool:
+		return lts
+	default:
+		return false
+	}
 }
 
 // Install downloads and installs a Node.js version.
@@ -81,9 +93,9 @@ func Install(versionStr string, verbose bool) (string, error) {
 		return "", fmt.Errorf("invalid version: %w", err)
 	}
 
-	// If partial version (e.g. "24", "24.14") or "latest", resolve to latest matching release.
+	// If partial version (e.g. "24", "24.14"), "latest", or "lts", resolve to a matching release.
 	resolvedVersion := v.String()
-	if v.Latest || v.IsPartial() {
+	if v.Latest || v.LTS || v.IsPartial() {
 		resolved, err := resolveLatestVersion(v)
 		if err != nil {
 			return "", err
@@ -157,17 +169,23 @@ func resolveLatestVersion(v version.Version) (string, error) {
 	}
 
 	for _, rel := range releases {
+		if v.LTS && !rel.IsLTS() {
+			continue
+		}
 		rv, err := version.Parse(rel.Version)
 		if err != nil {
 			continue
 		}
-		if v.Matches(rv) {
+		if v.Latest || v.LTS || v.Matches(rv) {
 			return rv.String(), nil
 		}
 	}
 
 	if v.Latest {
 		return "", fmt.Errorf("no Node.js releases found")
+	}
+	if v.LTS {
+		return "", fmt.Errorf("no Node.js LTS release found")
 	}
 	return "", fmt.Errorf("no Node.js release found matching %s", v.Raw)
 }

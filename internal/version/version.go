@@ -13,6 +13,7 @@ type Version struct {
 	Patch  int
 	Raw    string
 	Latest bool // true when input was "latest" or "node@latest"
+	LTS    bool // true when input was "lts" or "node@lts"
 }
 
 // stripToolPrefix removes an optional "tool@" prefix (e.g. "node@24" → "24").
@@ -37,6 +38,10 @@ func Parse(s string) (Version, error) {
 
 	if s == "latest" {
 		return Version{Raw: raw, Latest: true}, nil
+	}
+
+	if s == "lts" {
+		return Version{Raw: raw, LTS: true}, nil
 	}
 
 	parts := strings.SplitN(s, ".", 3)

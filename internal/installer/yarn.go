@@ -18,6 +18,9 @@ func InstallYarn(versionStr string, verbose bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid version: %w", err)
 	}
+	if v.LTS {
+		return "", fmt.Errorf("lts is only supported for node (driftr install node@lts); yarn has no LTS concept, use a version like yarn@1")
+	}
 
 	// Resolve partial versions via npm registry.
 	resolvedVersion := v.String()

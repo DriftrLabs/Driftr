@@ -78,7 +78,7 @@ pnpm -v   # resolves automatically
 
 | Command | Description |
 |---------|-------------|
-| `driftr install <tool[@version]>` | Download and install a tool version (node, pnpm, yarn); a bare tool name installs the latest |
+| `driftr install <tool[@version]>` | Download and install a tool version (node, pnpm, yarn); a bare tool name installs the latest; `node@lts` installs the newest LTS release |
 | `driftr uninstall <tool@version>` | Remove an installed tool version |
 | `driftr default <tool@version>` | Set the global default version for a tool |
 | `driftr pin <tool@version>` | Pin a version to the current project (`.driftr.toml` or `package.json`) |

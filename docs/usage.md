@@ -20,6 +20,9 @@ driftr install yarn@1
 # Install the latest version of a tool
 driftr install node@latest
 
+# Install the newest active LTS release (node only — pnpm/yarn have no LTS concept)
+driftr install node@lts
+
 # Verbose output (shows download URL, checksum verification)
 driftr install node@22 -v
 ```

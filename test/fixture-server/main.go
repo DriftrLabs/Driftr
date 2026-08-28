@@ -97,7 +97,10 @@ func main() {
 		fmt.Fprintf(&shasums, "%x  %s\n", sha256.Sum256(data), filename)
 	}
 
-	index := fmt.Sprintf(`[{"version":"v%s","lts":false}]`, fixtureVersion)
+	// Marked LTS so `driftr install node@lts` has something to resolve to
+	// end-to-end; LTS-vs-non-LTS filtering itself is unit-tested directly
+	// against a mocked release index in internal/installer/node_test.go.
+	index := fmt.Sprintf(`[{"version":"v%s","lts":"Fixture"}]`, fixtureVersion)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/index.json", func(w http.ResponseWriter, r *http.Request) {

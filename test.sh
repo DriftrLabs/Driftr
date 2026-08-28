@@ -161,6 +161,14 @@ check "node clean dry-run creates no node_modules" sh -c '! test -d /tmp/test-no
 cd /home/driftr || exit 1
 echo
 
+# ── 14b. LTS Alias ───────────────────────────
+echo -e "${BLUE}[14b] LTS Alias${NC}"
+LTS_OUTPUT=$(driftr install node@lts -v 2>&1) || true
+check_output "driftr install node@lts succeeds" "Installed" echo "$LTS_OUTPUT"
+check_output "install pnpm@lts errors (no LTS concept)" "lts is only supported for node" driftr install pnpm@lts
+check_output "install yarn@lts errors (no LTS concept)" "lts is only supported for node" driftr install yarn@lts
+echo
+
 # ── 15. pnpm/yarn Install ───────────────────
 echo -e "${BLUE}[15] pnpm/yarn Install${NC}"
 PNPM_OUTPUT=$(driftr install pnpm@9 -v 2>&1) || true

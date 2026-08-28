@@ -84,6 +84,24 @@ func TestParse_Latest(t *testing.T) {
 	}
 }
 
+func TestParse_LTS(t *testing.T) {
+	tests := []string{"lts", "node@lts"}
+	for _, input := range tests {
+		t.Run(input, func(t *testing.T) {
+			v, err := Parse(input)
+			if err != nil {
+				t.Fatalf("Parse(%q) unexpected error: %v", input, err)
+			}
+			if !v.LTS {
+				t.Errorf("Parse(%q).LTS = false, want true", input)
+			}
+			if v.Latest {
+				t.Errorf("Parse(%q).Latest = true, want false", input)
+			}
+		})
+	}
+}
+
 func TestMatches(t *testing.T) {
 	tests := []struct {
 		pattern string
