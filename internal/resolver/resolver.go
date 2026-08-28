@@ -121,12 +121,12 @@ func requireToolBinaryExists(tool, ver, context string) (string, error) {
 type Source int
 
 const (
-	SourceExplicit    Source = iota
-	SourceProject            // .driftr.toml
-	SourcePackageJSON        // package.json driftr key
-	SourceNvmrc              // .nvmrc
-	SourceNodeVersion        // .node-version
-	SourcePackageManager     // package.json "packageManager" field
+	SourceExplicit       Source = iota
+	SourceProject               // .driftr.toml
+	SourcePackageJSON           // package.json driftr key
+	SourceNvmrc                 // .nvmrc
+	SourceNodeVersion           // .node-version
+	SourcePackageManager        // package.json "packageManager" field
 	SourceGlobal
 )
 
