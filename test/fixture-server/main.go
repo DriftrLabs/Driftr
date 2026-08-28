@@ -38,7 +38,11 @@ var platforms = []struct{ os, arch string }{
 func buildTarball(osName, arch string) ([]byte, error) {
 	prefix := fmt.Sprintf("node-v%s-%s-%s/", fixtureVersion, osName, arch)
 	scripts := map[string]string{
-		"bin/node": fmt.Sprintf("#!/bin/sh\necho \"v%s\"\n", fixtureVersion),
+		// When invoked with just a version flag, prints the fixture version
+		// like real node. When invoked with a script path (as driftr does to
+		// run yarn/pnpm, which need node to execute), echoes the script path
+		// too, so tests can confirm which script actually got exec'd.
+		"bin/node": fmt.Sprintf("#!/bin/sh\ncase \"$1\" in\n  -v|--version) echo \"v%s\" ;;\n  *) echo \"v%s ran: $1\" ;;\nesac\n", fixtureVersion, fixtureVersion),
 		"bin/npm":  "#!/bin/sh\necho \"10.99.0\"\n",
 		"bin/npx":  "#!/bin/sh\necho \"10.99.0\"\n",
 	}

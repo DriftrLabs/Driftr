@@ -169,13 +169,12 @@ check_output "driftr install pnpm@9 succeeds" "Checksum verified OK\|Installed" 
 check_output "list pnpm shows installed version" "9\\." driftr list pnpm
 PNPM_INSTALLED=$(driftr list pnpm 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 check "driftr default pnpm@\$PNPM_INSTALLED succeeds" driftr default "pnpm@$PNPM_INSTALLED"
-# The fixture node binary (used for the node@22 mirror install above) is a
-# stub that always echoes its own version and ignores any script it's given
-# (test/fixture-server/main.go), so it can't be used to check pnpm's actual
-# -v output here. Verify resolution instead, which exercises the same
-# version-pinning logic the shim relies on.
 check_output "pnpm resolves to installed version" "$PNPM_INSTALLED" driftr which pnpm
-check "pnpm shim executes without error" "$HOME/.driftr/bin/pnpm" -v
+# The fixture node (used for the node@22 mirror install above) can't run
+# real pnpm.cjs and print its version, but it does echo which script it was
+# handed — enough to confirm the shim execs pnpm's own script under node,
+# not node's own -v.
+check_output "pnpm shim execs pnpm.cjs via node" "pnpm.cjs" "$HOME/.driftr/bin/pnpm" -v
 
 YARN_OUTPUT=$(driftr install yarn@1 -v 2>&1) || true
 echo "$YARN_OUTPUT" | head -10
@@ -184,7 +183,7 @@ check_output "list yarn shows installed version" "1\\." driftr list yarn
 YARN_INSTALLED=$(driftr list yarn 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 check "driftr default yarn@\$YARN_INSTALLED succeeds" driftr default "yarn@$YARN_INSTALLED"
 check_output "yarn resolves to installed version" "$YARN_INSTALLED" driftr which yarn
-check "yarn shim executes without error" "$HOME/.driftr/bin/yarn" -v
+check_output "yarn shim execs yarn.js via node" "yarn.js" "$HOME/.driftr/bin/yarn" -v
 echo
 
 # ── 16. Uninstall ────────────────────────────
