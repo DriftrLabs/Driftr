@@ -161,6 +161,54 @@ check "node clean dry-run creates no node_modules" sh -c '! test -d /tmp/test-no
 cd /home/driftr || exit 1
 echo
 
+# ── 15. pnpm/yarn Install ───────────────────
+echo -e "${BLUE}[15] pnpm/yarn Install${NC}"
+PNPM_OUTPUT=$(driftr install pnpm@9 -v 2>&1) || true
+echo "$PNPM_OUTPUT" | head -10
+check_output "driftr install pnpm@9 succeeds" "Checksum verified OK\|Installed" echo "$PNPM_OUTPUT"
+check_output "list pnpm shows installed version" "9\\." driftr list pnpm
+PNPM_INSTALLED=$(driftr list pnpm 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+check "driftr default pnpm@\$PNPM_INSTALLED succeeds" driftr default "pnpm@$PNPM_INSTALLED"
+# The fixture node binary (used for the node@22 mirror install above) is a
+# stub that always echoes its own version and ignores any script it's given
+# (test/fixture-server/main.go), so it can't be used to check pnpm's actual
+# -v output here. Verify resolution instead, which exercises the same
+# version-pinning logic the shim relies on.
+check_output "pnpm resolves to installed version" "$PNPM_INSTALLED" driftr which pnpm
+check "pnpm shim executes without error" "$HOME/.driftr/bin/pnpm" -v
+
+YARN_OUTPUT=$(driftr install yarn@1 -v 2>&1) || true
+echo "$YARN_OUTPUT" | head -10
+check_output "driftr install yarn@1 succeeds" "Checksum verified OK\|Installed" echo "$YARN_OUTPUT"
+check_output "list yarn shows installed version" "1\\." driftr list yarn
+YARN_INSTALLED=$(driftr list yarn 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+check "driftr default yarn@\$YARN_INSTALLED succeeds" driftr default "yarn@$YARN_INSTALLED"
+check_output "yarn resolves to installed version" "$YARN_INSTALLED" driftr which yarn
+check "yarn shim executes without error" "$HOME/.driftr/bin/yarn" -v
+echo
+
+# ── 16. Uninstall ────────────────────────────
+echo -e "${BLUE}[16] Uninstall${NC}"
+check "driftr uninstall pnpm@\$PNPM_INSTALLED succeeds" driftr uninstall "pnpm@$PNPM_INSTALLED"
+check_output "list pnpm no longer shows uninstalled version" "No pnpm versions installed" driftr list pnpm
+check_output "uninstall unknown version errors" "not installed" driftr uninstall "pnpm@0.0.1"
+check_output "uninstall without version errors" "version required" driftr uninstall pnpm
+echo
+
+# ── 17. Doctor ────────────────────────────────
+echo -e "${BLUE}[17] Doctor${NC}"
+check "driftr doctor runs" driftr doctor
+check_output "doctor reports PATH status" "PATH" driftr doctor
+check "driftr doctor --fix runs" driftr doctor --fix
+echo
+
+# ── 18. Self-update (registration only) ──────
+# Actually replacing the running binary mid-suite would break every command
+# after it, so only verify the command is wired up, not a real update.
+echo -e "${BLUE}[18] Self-update${NC}"
+check_output "self-update is a registered command" "self-update" driftr --help
+echo
+
 # ── Summary ───────────────────────────────────
 echo ""
 echo -e "${BLUE}═══════════════════════════════════════${NC}"
