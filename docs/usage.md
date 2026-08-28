@@ -210,6 +210,11 @@ driftr run --node 20.11.0 -- node script.js
 - The global default and project pin are not changed
 - The `--` separator is required between flags and the command
 - Exit codes are preserved
+- `--node` always pins the Node.js runtime. For `yarn`/`pnpm`, which need
+  Node.js to execute but have their own independently pinned version, only
+  the Node.js they run under is affected — the tool's own version still
+  resolves normally from project/global config (e.g. `driftr run --node
+  20.11.0 -- yarn` runs your pinned/default yarn under Node 20.11.0)
 
 ## driftr setup
 

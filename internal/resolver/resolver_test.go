@@ -303,6 +303,41 @@ func TestResolveBinary_NpmResolveViaNode(t *testing.T) {
 	}
 }
 
+func TestResolveBinaryFull_ExplicitPinsNodeNotTool(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := platform.EnsureDirs(); err != nil {
+		t.Fatal(err)
+	}
+	setupFakeInstall(t, home, "node", "22.14.0")
+	setupFakeInstall(t, home, "node", "20.0.0")
+	setupFakeInstall(t, home, "pnpm", "9.15.0")
+
+	globalCfg, _ := config.LoadGlobal()
+	globalCfg.Default.SetTool("node", "22.14.0")
+	globalCfg.Default.SetTool("pnpm", "9.15.0")
+	config.SaveGlobal(globalCfg)
+
+	emptyDir := t.TempDir()
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	os.Chdir(emptyDir)
+
+	// explicit ("20.0.0") comes from `driftr run --node 20.0.0 -- pnpm`.
+	// It must pin the Node.js runtime, not pnpm's own version — pnpm still
+	// resolves to its configured default (9.15.0).
+	rb, err := ResolveBinaryFull("pnpm", "20.0.0")
+	if err != nil {
+		t.Fatalf("ResolveBinaryFull(pnpm, 20.0.0) error: %v", err)
+	}
+	if !strings.Contains(rb.ToolPath, filepath.Join("pnpm", "9.15.0")) {
+		t.Errorf("ToolPath = %q, want pnpm 9.15.0 (own version unaffected by explicit)", rb.ToolPath)
+	}
+	if !strings.Contains(rb.NodePath, filepath.Join("node", "20.0.0")) {
+		t.Errorf("NodePath = %q, want node 20.0.0 (pinned by explicit)", rb.NodePath)
+	}
+}
+
 func TestSourceString(t *testing.T) {
 	tests := []struct {
 		source Source
